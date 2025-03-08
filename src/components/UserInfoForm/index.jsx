@@ -7,6 +7,8 @@ import { 기호식품카테고리 } from '../../data/preferences';
 import '../../styles/UserInfoForm.css';
 import { read, utils } from 'xlsx';
 import { useNavigate } from 'react-router-dom';
+import { 스트레스카테고리, evaluateStressLevel } from '../../data/stressEvents';
+import { Box, Typography, Button } from '@mui/material';
 // Excel 날짜를 JavaScript Date로 변환하는 함수
 const excelDateToJSDate = (excelDate) => {
   try {
@@ -91,7 +93,11 @@ const initialFormState = {
   pvc: '',
   bv: '',
   sv: '',
-  heartRate: ''
+  heartRate: '',
+  selectedStressEvents: [],
+  stressScore: 0,
+  stressLevel: '',
+  stressDescription: ''
 };
 // 데이터 로딩 체크 함수
 const checkDataLoaded = () => {
@@ -149,10 +155,19 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [error, setError] = useState(null);
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState({
+    ...initialFormState,
+    ...initialValues
+  });
   const fileInputRef = useRef(null);
   const [dataAvailable, setDataAvailable] = useState(checkDataLoaded());
-
+  const [selectedStressCategory, setSelectedStressCategory] = useState('');
+  const [selectedStressItems, setSelectedStressItems] = useState([]);
+  const [stressLevel, setStressLevel] = useState('');
+  const [data, setData] = useState([]);  // 데이터 배열
+  const [selectedItems, setSelectedItems] = useState([]);  // 선택된 항목들
+  const [tableData, setTableData] = useState([]);  // 테이블 데이터
+  const [selectedIds, setSelectedIds] = useState([]);  // 선택된 행의 ID들
   // initialValues가 변경될 때 폼 데이터 업데이트
   useEffect(() => {
     if (initialValues && Object.keys(initialValues).length > 0) {
@@ -164,7 +179,6 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
       }));
     }
   }, [initialValues]);
-
   // useEffect를 조건부 렌더링 이전으로 이동
   useEffect(() => {
     const loadSavedData = () => {
@@ -178,10 +192,8 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
         console.error('데이터 로드 실패:', error);
       }
     };
-
     loadSavedData();
   }, []);
-
   // useEffect에서 초기화 확인 메시지 제거
   useEffect(() => {
     // 컴포넌트 마운트 시 필요한 초기화 작업만 수행
@@ -193,10 +205,18 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
         console.error('초기화 중 오류:', error);
       }
     };
-
     loadInitialData();
   }, []);
-
+  // 스트레스 항목이 변경될 때마다 스트레스 레벨을 업데이트하는 useEffect 추가
+  useEffect(() => {
+    if (selectedStressItems.length > 0) {
+      const totalScore = selectedStressItems.reduce((sum, item) => sum + item.score, 0);
+      const evaluation = evaluateStressLevel(totalScore);
+      setStressLevel(evaluation.level); // 스트레스 레벨 업데이트
+    } else {
+      setStressLevel(''); // 선택된 항목이 없을 때는 초기화
+    }
+  }, [selectedStressItems]);
   // 데이터가 로드되지 않았을 때의 렌더링
   if (!dataAvailable) {
     return <div>데이터 로딩 중...</div>;
@@ -326,9 +346,9 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
         name: formData.name,
         residentNumber: formData.residentNumber,
         gender: formData.gender,
-        personality: formData.personality,     // 확인
-        stress: formData.stress,              // 확인
-        workIntensity: formData.workIntensity, // 확인
+        personality: formData.personality,
+        stress: formData.stress,
+        workIntensity: formData.workIntensity,
         height: formData.height,
         weight: formData.weight,
         bmi: formData.bmi,
@@ -343,7 +363,6 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
         ca_ratio: formData.ca_ratio,
         da_ratio: formData.da_ratio,
         ea_ratio: formData.ea_ratio,
-        // 계산된 값들 추가
         pvc: pvc,
         bv: bv,
         sv: sv,
@@ -353,14 +372,13 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
         preference: formData.preference,
         memo: formData.memo
       };
-
       console.log('저장되는 데이터:', newData);
-
+      
       const currentData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
       currentData.push(newData);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentData));
       
-      console.log('localStorage 저장 후:', JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY))); // 디버깅용 로그
+      console.log('localStorage 저장 후:', JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)));
       
       setFormData(initialFormState);
       navigate('/data-view');
@@ -729,11 +747,9 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
     const c_a = parseFloat(formData.ca_ratio); // c/a = -0.39
     const d_a = parseFloat(formData.da_ratio); // d/a = -0.25
     const e_a = parseFloat(formData.ea_ratio); // e/a = 0.18
-
     if ([ab, ac, ad, ae, b_a, c_a, d_a, e_a].some(isNaN)) {
       return 'NaN';
     }
-
     // PVC = 0.2⋅ABS(b/a) + 0.15⋅ABS(d/a) + 0.1⋅(a-e) + 0.05⋅ABS(c/a)
     const result = (
       0.2 * Math.abs(b_a) +    // 0.2 * 0.77
@@ -741,10 +757,8 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
       0.1 * ae +               // 0.1 * 278
       0.05 * Math.abs(c_a)     // 0.05 * 0.39
     );
-
     return result.toFixed(2);
   };
-
   const calculateBV = (formData) => {
     const ab = parseFloat(formData.ab_ms);    // a-b = 88
     const ac = parseFloat(formData.ac_ms);    // a-c = 157
@@ -754,11 +768,9 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
     const c_a = parseFloat(formData.ca_ratio); // c/a = -0.39
     const d_a = parseFloat(formData.da_ratio); // d/a = -0.25
     const e_a = parseFloat(formData.ea_ratio); // e/a = 0.18
-
     if ([ab, ac, ad, ae, b_a, c_a, d_a, e_a].some(isNaN)) {
       return 'NaN';
     }
-
     // BV = 0.15⋅ABS(c/a) + 0.1⋅((a-d)-(a-c)) + 0.1⋅(a-e)/(a-b) + 0.05⋅(a-b)
     const result = (
       0.15 * Math.abs(c_a) +   // 0.15 * 0.39
@@ -766,30 +778,24 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
       0.1 * (ae / ab) +        // 0.1 * (278 / 88)
       0.05 * ab                // 0.05 * 88
     );
-
     return result.toFixed(2);
   };
-
   const calculateSV = (formData) => {
     const ab = parseFloat(formData.ab_ms);    // a-b = 88
     const ae = parseFloat(formData.ae_ms);    // a-e = 278
     const b_a = parseFloat(formData.ba_ratio); // b/a = -0.77
     const d_a = parseFloat(formData.da_ratio); // d/a = -0.25
-
     if ([ab, ae, b_a, d_a].some(isNaN)) {
       return 'NaN';
     }
-
     // SV = 0.05⋅ABS(d/a) + 0.03⋅(a-e) + 0.02⋅ABS(b/a)
     const result = (
       0.05 * Math.abs(d_a) +   // 0.05 * 0.25
       0.03 * ae +              // 0.03 * 278
       0.02 * Math.abs(b_a)     // 0.02 * 0.77
     );
-
     return result.toFixed(2);
   };
-
   // 맥파 데이터가 변경될 때 호출되는 함수
   const updatePulseCalculations = () => {
     if (formData.ab_ms && formData.ac_ms && formData.ad_ms && formData.ae_ms) {
@@ -798,7 +804,6 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
       const c = parseFloat(formData.ca_ratio);
       const d = parseFloat(formData.da_ratio);
       const e = parseFloat(formData.ea_ratio);
-
       if (!isNaN(a) && !isNaN(b) && !isNaN(c) && !isNaN(d) && !isNaN(e)) {
         setFormData(prev => ({
           ...prev,
@@ -809,12 +814,10 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
       }
     }
   };
-
   // useEffect를 사용하여 맥파 데이터가 변경될 때마다 계산 실행
   useEffect(() => {
     updatePulseCalculations();
   }, [formData.ab_ms, formData.ba_ratio, formData.ca_ratio, formData.da_ratio, formData.ea_ratio]);
-
   // resetForm 함수 추가
   const resetForm = () => {
     setFormData({
@@ -848,7 +851,11 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
       pvc: '',
       bv: '',
       sv: '',
-      heartRate: ''
+      heartRate: '',
+      selectedStressEvents: [],
+      stressScore: 0,
+      stressLevel: '',
+      stressDescription: ''
     });
   };
   // validateForm 함수 수정
@@ -966,11 +973,15 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
               </td>
               <td><input type="text" name="personality" /></td>
               <td>
-                <select name="stress">
-                  <option value="">선택</option>
-                  <option value="low">낮음</option>
-                  <option value="medium">보통</option>
-                  <option value="high">높음</option>
+                <select 
+                  className="form-select"
+                  value={stressLevel}
+                  onChange={(e) => setStressLevel(e.target.value)}
+                >
+                  <option value="">선택하세요</option>
+                  <option value="낮음">낮음</option>
+                  <option value="중간">중간</option>
+                  <option value="높음">높음</option>
                 </select>
               </td>
               <td>
@@ -1014,8 +1025,8 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
                 <select name="preference">
                   <option value="">선택</option>
                   {기호식품카테고리.map((기호품, index) => (
-                    <option key={`preference-${index}`} value={기호품}>{기호품}</option>
-                  ))}
+                  <option key={`preference-${index}`} value={기호품}>{기호품}</option>
+                ))}
                 </select>
               </td>
               <td><textarea name="memo" /></td>
@@ -1025,471 +1036,648 @@ const UserInfoForm = ({ onSubmit, initialValues = {}, mode = 'create' }) => {
       </div>
     );
   };
+  // UserInfoForm 컴포넌트 내부에 스트레스 관련 핸들러 추가
+  const handleStressCategoryChange = (e) => {
+    setSelectedStressCategory(e.target.value);
+  };
+  const handleStressItemSelect = (e) => {
+    const selectedItem = JSON.parse(e.target.value);
+    if (!selectedStressItems.some(item => item.name === selectedItem.name)) {
+      setSelectedStressItems([...selectedStressItems, selectedItem]);
+    }
+  };
+  const removeStressItem = (itemToRemove) => {
+    const newItems = selectedStressItems.filter(item => item.name !== itemToRemove.name);
+    setSelectedStressItems(newItems);
+    
+    // 총점 재계산
+    const totalScore = newItems.reduce((sum, item) => sum + item.score, 0);
+    const evaluation = evaluateStressLevel(totalScore);
+    
+    // 스트레스 수준을 기존 입력필드 형식으로 변환
+    let stressLevel = '';
+    if (evaluation.level === '높음') {
+      stressLevel = '매우 높음';
+    } else if (evaluation.level === '중간') {
+      stressLevel = '보통';
+    } else {
+      stressLevel = '낮음';
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      stress: stressLevel, // 기존 스트레스 입력필드에 자동 입력
+      stressScore: totalScore,
+      stressLevel: evaluation.level,
+      stressDescription: evaluation.description
+    }));
+  };
+  // 체크박스 선택 처리
+  const handleSelect = (id) => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+  // 전체 선택 처리
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = tableData.map(item => item.id);
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+  // 선택된 항목 삭제
+  const handleDelete = () => {
+    if (selectedIds.length === 0) return;
+    
+    if (window.confirm('선택한 항목을 삭제하시겠습니까?')) {
+      // 선택되지 않은 항목만 필터링하여 새로운 배열 생성
+      const newData = tableData.filter(item => !selectedIds.includes(item.id));
+      setTableData(newData);
+      setSelectedIds([]); // 선택 초기화
+    }
+  };
+  const handleLaunchUBioMacpa = async () => {
+    console.log('Window object:', window);
+    console.log('Electron:', window.electron);  // 'electronAPI' 대신 'electron' 사용
+    
+    try {
+      if (!window.electron) {  // 'electronAPI' 대신 'electron' 사용
+        console.error('Electron API가 없습니다');
+        return;
+      }
+      
+      const result = await window.electron.launchUbio();  // 'electronAPI' 대신 'electron' 사용
+      console.log('실행 결과:', result);
+    } catch (error) {
+      console.error('프로그램 실행 오류:', error);
+      alert('유비오맥파기 프로그램 실행 중 오류가 발생했습니다.');
+    }
+  };
   return (
     <div className="form-container">
-      {/* 기본 정보 섹션 */}
-      <div className="form-section basic-info-section">
-        <h2 className="section-title">기본 정보</h2>
-        <div className="form-row personal-info">
-          <div className="form-group name">
-            <label className="form-label required">이름</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              placeholder="이름을 입력하세요"
-              style={getInputStyle('name')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group registration">
-            <label className="form-label required">주민등록번호</label>
-            <input
-              type="text"
-              name="residentNumber"
-              value={formData.residentNumber}
-              onChange={handleResidentNumberChange}
-              placeholder="주민등록번호 13자리"
-              maxLength="14"
-              style={getInputStyle('residentNumber')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group gender">
-            <label className="form-label">성별</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleInputChange}
-              style={getInputStyle('gender')}
-            >
-              <option value="">선택하세요</option>
-              <option value="male">남성</option>
-              <option value="female">여성</option>
-            </select>
-            {error && <span className="error-message">{error}</span>}
-          </div>
-        </div>
-        <div className="form-row personality-row">
-          <div className="form-group personality">
-            <label className="form-label">성격</label>
-            <select
-              name="personality"
-              value={formData.personality}
-              onChange={handleInputChange}
-              style={getInputStyle('personality')}
-            >
-              <option value="">선택하세요</option>
-              <option value="매우 급함">매우 급함</option>
-              <option value="급함">급함</option>
-              <option value="원만">원만</option>
-              <option value="느긋">느긋</option>
-              <option value="매우 느긋">매우 느긋</option>
-            </select>
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group stress">
-            <label className="form-label">스트레스</label>
-            <select
-              name="stress"
-              value={formData.stress}
-              onChange={handleInputChange}
-              style={getInputStyle('stress')}
-            >
-              <option value="">선택하세요</option>
-              <option value="매우 높음">매우 높음</option>
-              <option value="높음">높음</option>
-              <option value="보통">보통</option>
-              <option value="낮음">낮음</option>
-              <option value="매우 낮음">매우 낮음</option>
-            </select>
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group work-intensity">
-            <label className="form-label">노동강도</label>
-            <select
-              name="workIntensity"
-              value={formData.workIntensity}
-              onChange={handleInputChange}
-              style={getInputStyle('workIntensity')}
-            >
-              <option value="">선택하세요</option>
-              <option value="매우 높음">매우 높음</option>
-              <option value="높음">높음</option>
-              <option value="보통">보통</option>
-              <option value="낮음">낮음</option>
-              <option value="매우 낮음">매우 낮음</option>
-            </select>
-            {error && <span className="error-message">{error}</span>}
-          </div>
-        </div>
-        <div className="form-row measurements-row">
-          <div className="form-group height">
-            <label className="form-label">신장</label>
-            <input
-              type="number"
-              name="height"
-              value={formData.height}
-              onChange={handleInputChange}
-              placeholder="cm"
-              style={getInputStyle('height')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group weight">
-            <label className="form-label">체중</label>
-            <input
-              type="number"
-              name="weight"
-              value={formData.weight}
-              onChange={handleInputChange}
-              placeholder="kg"
-              style={getInputStyle('weight')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group bmi">
-            <label className="form-label">BMI 지수</label>
-            <input
-              type="text"
-              name="bmi"
-              value={formData.bmi}
-              readOnly
-              placeholder="BMI"
-              style={getInputStyle('bmi')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-        </div>
-      </div>
-      {/* 맥박 분석 섹션 */}
-      <div className="form-section pulse-section">
-        <h2 className="section-title">맥박 분석</h2>
-        <div className="form-row pulse-analysis-row">
-          <div className="form-group pulse">
-            <label className="form-label">맥박</label>
-            <input
-              type="text"
-              name="pulse"
-              value={formData.pulse}
-              onChange={handleInputChange}
-              placeholder="회/분"
-              style={getInputStyle('pulse')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group systolic">
-            <label className="form-label">수축기 혈압</label>
-            <input
-              type="text"
-              name="systolicBP"
-              value={formData.systolicBP}
-              onChange={handleInputChange}
-              placeholder="mmHg"
-              style={getInputStyle('systolicBP')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group diastolic">
-            <label className="form-label">이완기 혈압</label>
-            <input
-              type="text"
-              name="diastolicBP"
-              value={formData.diastolicBP}
-              onChange={handleInputChange}
-              placeholder="mmHg"
-              style={getInputStyle('diastolicBP')}
-            />
-            {error && <span className="error-message">{error}</span>}
+      {/* 기본정보 섹션 */}
+      <div className="form-box analysis-box enhanced-box shadow-box">
+        <div className="section-marker red"></div>
+        <div className="section-content">
+          <h2 className="section-title large-title">기본 정보</h2>
+          <div className="input-row">
+            <div className="input-group">
+              <label className="form-label required">이름</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="이름을 입력하세요"
+                style={getInputStyle('name')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label required">주민등록번호</label>
+              <input
+                type="text"
+                name="residentNumber"
+                value={formData.residentNumber}
+                onChange={handleResidentNumberChange}
+                placeholder="주민등록번호 13자리"
+                maxLength="14"
+                style={getInputStyle('residentNumber')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">성별</label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleInputChange}
+                style={getInputStyle('gender')}
+              >
+                <option value="">선택하세요</option>
+                <option value="male">남성</option>
+                <option value="female">여성</option>
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">성격</label>
+              <select
+                name="personality"
+                value={formData.personality}
+                onChange={handleInputChange}
+                style={getInputStyle('personality')}
+              >
+                <option value="">선택하세요</option>
+                <option value="매우 급함">매우 급함</option>
+                <option value="급함">급함</option>
+                <option value="원만">원만</option>
+                <option value="느긋">느긋</option>
+                <option value="매우 느긋">매우 느긋</option>
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group stress">
+              <label className="form-label">스트레스</label>
+               <select
+                name="stress"
+                value={formData.stress}
+                onChange={handleInputChange}
+                style={getInputStyle('stress')}
+              >
+                <option value="">선택하세요</option>
+                <option value="매우 높음">매우 높음</option>
+                <option value="높음">높음</option>
+                <option value="보통">보통</option>
+                <option value="낮음">낮음</option>
+                <option value="매우 낮음">매우 낮음</option>
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">노동강도</label>
+              <select
+                name="workIntensity"
+                value={formData.workIntensity}
+                onChange={handleInputChange}
+                style={getInputStyle('workIntensity')}
+              >
+                <option value="">선택하세요</option>
+                <option value="매우 높음">매우 높음</option>
+                <option value="높음">높음</option>
+                <option value="보통">보통</option>
+                <option value="낮음">낮음</option>
+                <option value="매우 낮음">매우 낮음</option>
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">신장</label>
+              <input
+                type="number"
+                name="height"
+                value={formData.height}
+                onChange={handleInputChange}
+                placeholder="cm"
+                style={getInputStyle('height')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">체중</label>
+              <input
+                type="number"
+                name="weight"
+                value={formData.weight}
+                onChange={handleInputChange}
+                placeholder="kg"
+                style={getInputStyle('weight')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">BMI 지수</label>
+              <input
+                type="text"
+                name="bmi"
+                value={formData.bmi}
+                readOnly
+                placeholder="BMI"
+                style={getInputStyle('bmi')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            
           </div>
         </div>
       </div>
-      {/* 맥파 분석 섹션 */}
-      <div className="form-section pulse-section">
-        <h2 className="section-title">맥파분석</h2>
-        <div className="form-row file-control-row">
-          <div className="form-group">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileSelect}
-              accept=".xlsx,.xls"
-              style={{ display: 'none' }}
-            />
-            <button 
-              className="button secondary"
-              onClick={handleFileButtonClick}
-              disabled={isLoading}
-            >
-              유비오 맥파 데이터 가져오기
-            </button>
-            {error && <span className="error-message">{error}</span>}
-          </div>
-        </div>
-        <div className="form-row pulse-wave-row">
-          <div className="form-group">
-            <label className="form-label">a-b</label>
-            <input
-              type="text"
-              name="ab_ms"
-              value={formData.ab_ms}
-              onChange={handleInputChange}
-              style={getInputStyle('ab_ms')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">a-c</label>
-            <input
-              type="text"
-              name="ac_ms"
-              value={formData.ac_ms}
-              onChange={handleInputChange}
-              style={getInputStyle('ac_ms')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">a-d</label>
-            <input
-              type="text"
-              name="ad_ms"
-              value={formData.ad_ms}
-              onChange={handleInputChange}
-              style={getInputStyle('ad_ms')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">a-e</label>
-            <input
-              type="text"
-              name="ae_ms"
-              value={formData.ae_ms}
-              onChange={handleInputChange}
-              style={getInputStyle('ae_ms')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-        </div>
-        <div className="form-row pulse-ratio-row">
-          <div className="form-group">
-            <label className="form-label">b/a</label>
-            <input
-              type="text"
-              name="ba_ratio"
-              value={formData.ba_ratio}
-              onChange={handleInputChange}
-              style={getInputStyle('ba_ratio')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">c/a</label>
-            <input
-              type="text"
-              name="ca_ratio"
-              value={formData.ca_ratio}
-              onChange={handleInputChange}
-              style={getInputStyle('ca_ratio')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">d/a</label>
-            <input
-              type="text"
-              name="da_ratio"
-              value={formData.da_ratio}
-              onChange={handleInputChange}
-              style={getInputStyle('da_ratio')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">e/a</label>
-            <input
-              type="text"
-              name="ea_ratio"
-              value={formData.ea_ratio}
-              onChange={handleInputChange}
-              style={getInputStyle('ea_ratio')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-        </div>
-        <div className="form-row pulse-analysis-results">
-          <div className="form-group">
-            <label className="form-label">말초혈관 수축도 (PVC)</label>
-            <input
-              type="text"
-              name="pvc"
-              value={calculatePVC(formData)}
-              readOnly
-              className="analysis-result"
-              style={getInputStyle('pvc')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">혈액 점도 (BV)</label>
-            <input
-              type="text"
-              name="bv"
-              value={calculateBV(formData)}
-              readOnly
-              className="analysis-result"
-              style={getInputStyle('bv')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">일회박출량 (SV)</label>
-            <input
-              type="text"
-              name="sv"
-              value={calculateSV(formData)}
-              readOnly
-              className="analysis-result"
-              style={getInputStyle('sv')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group">
-            <label className="form-label">심박수 (HR)</label>
-            <input
-              type="text"
-              name="hr"
-              value={formData.pulse}
-              readOnly
-              className="analysis-result"
-              style={getInputStyle('hr')}
-            />
-            {error && <span className="error-message">{error}</span>}
-          </div>
-        </div>
-      </div>
-      {/* 증상 선택 섹션 */}
-      <div className="form-section symptoms-section">
-        <h2 className="section-title">증상 선택</h2>
-        <div className="form-row symptoms-category-row">
-          <div className="form-group category">
-            <label className="form-label">대분류</label>
-            <select value={formData.selectedCategory} onChange={handleCategoryChange} style={getInputStyle('selectedCategory')}>
-              <option value="">선택하세요</option>
-              {Object.keys(증상카테고리).map(category => (
-                <option key={`cat-${category}`} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group subcategory">
-            <label className="form-label">중분류</label>
-            <select value={formData.selectedSubCategory} onChange={handleSubCategoryChange} style={getInputStyle('selectedSubCategory')}>
-              <option value="">선택하세요</option>
-              {formData.selectedCategory && 
-                Object.keys(증상카테고리[formData.selectedCategory]).map(subCategory => (
-                  <option key={`subcat-${formData.selectedCategory}-${subCategory}`} value={subCategory}>
-                    {subCategory}
+
+      <div className="form-box analysis-box enhanced-box shadow-box">
+        <div className="section-marker orange"></div>
+        <div className="section-content">
+          <h2 className="section-title large-title">스트레스 평가</h2>
+          <div className="input-row">
+            <div className="input-group">
+              <label className="form-label">스트레스 대분류</label>
+              <select
+                className="form-select"
+                value={selectedStressCategory}
+                onChange={handleStressCategoryChange}
+              >
+                <option value="">선택하세요</option>
+                {스트레스카테고리.map((category, index) => (
+                  <option key={index} value={category.대분류}>
+                    {category.대분류}
                   </option>
-                ))
-              }
-            </select>
-            {error && <span className="error-message">{error}</span>}
+                ))}
+              </select>
+            </div>
+            <div className="input-group">
+              <label className="form-label">스트레스 항목</label>
+              <select
+                className="form-select"
+                onChange={handleStressItemSelect}
+                disabled={!selectedStressCategory}
+              >
+                <option value="">선택하세요</option>
+                {selectedStressCategory && 스트레스카테고리
+                  .find(category => category.대분류 === selectedStressCategory)
+                  ?.중분류.map((item, index) => (
+                    <option key={index} value={JSON.stringify(item)}>
+                      {item.name} ({item.score}점)
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
-          <div className="form-group symptom">
-            <label className="form-label">소분류</label>
-            <select value={formData.selectedSymptom} onChange={handleSymptomChange} style={getInputStyle('selectedSymptom')}>
-              <option value="">선택하세요</option>
-              {formData.selectedSubCategory && 
-                증상카테고리[formData.selectedCategory][formData.selectedSubCategory].map(symptom => (
-                  <option 
-                    key={`sym-${formData.selectedCategory}-${formData.selectedSubCategory}-${symptom.name}`} 
-                    value={symptom.name}
-                  >
-                    {symptom.name}
+
+          {selectedStressItems.length > 0 && (
+            <div className="selected-items">
+              <div className="selected-items-list">
+                {selectedStressItems.map((item, index) => (
+                  <div key={index} className="selected-item">
+                    <span>{item.name} ({item.score}점)</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStressItems(
+                          selectedStressItems.filter((_, i) => i !== index)
+                        );
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="stress-evaluation">
+                {(() => {
+                  const totalScore = selectedStressItems.reduce((sum, item) => sum + item.score, 0);
+                  const evaluation = evaluateStressLevel(totalScore);
+                  return (
+                    <>
+                      <div className="stress-total">총점: {totalScore}점</div>
+                      <div className="stress-level">
+                        스트레스 수준: <span className={`level-${evaluation.level}`}>{evaluation.level}</span>
+                        <div className="level-description">({evaluation.description})</div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="form-box analysis-box enhanced-box shadow-box">
+        <div className="section-marker yellow"></div>
+        <div className="section-content">
+          <h2 className="section-title large-title">혈압 및 맥박수</h2>
+          <div className="input-row">
+            <div className="input-group">
+              <label className="form-label">맥박</label>
+              <input
+                type="text"
+                name="pulse"
+                value={formData.pulse}
+                onChange={handleInputChange}
+                placeholder="회/분"
+                style={getInputStyle('pulse')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">수축기 혈압</label>
+              <input
+                type="text"
+                name="systolicBP"
+                value={formData.systolicBP}
+                onChange={handleInputChange}
+                placeholder="mmHg"
+                style={getInputStyle('systolicBP')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="input-group">
+              <label className="form-label">이완기 혈압</label>
+              <input
+                type="text"
+                name="diastolicBP"
+                value={formData.diastolicBP}
+                onChange={handleInputChange}
+                placeholder="mmHg"
+                style={getInputStyle('diastolicBP')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="form-box analysis-box enhanced-box shadow-box">
+        <div className="section-marker green"></div>
+        <div className="section-content">
+          <h2 className="section-title large-title">증상 선택</h2>
+          <div className="form-row symptoms-category-row">
+            <div className="form-group category">
+              <label className="form-label">대분류</label>
+              <select value={formData.selectedCategory} onChange={handleCategoryChange} style={getInputStyle('selectedCategory')}>
+                <option value="">선택하세요</option>
+                {Object.keys(증상카테고리).map(category => (
+                  <option key={`cat-${category}`} value={category}>
+                    {category}
                   </option>
-                ))
-              }
-            </select>
-            {error && <span className="error-message">{error}</span>}
+                ))}
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group subcategory">
+              <label className="form-label">중분류</label>
+              <select value={formData.selectedSubCategory} onChange={handleSubCategoryChange} style={getInputStyle('selectedSubCategory')}>
+                <option value="">선택하세요</option>
+                {formData.selectedCategory && 
+                  Object.keys(증상카테고리[formData.selectedCategory]).map(subCategory => (
+                    <option key={`subcat-${formData.selectedCategory}-${subCategory}`} value={subCategory}>
+                      {subCategory}
+                    </option>
+                  ))
+                }
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group symptom">
+              <label className="form-label">소분류</label>
+              <select value={formData.selectedSymptom} onChange={handleSymptomChange} style={getInputStyle('selectedSymptom')}>
+                <option value="">선택하세요</option>
+                {formData.selectedSubCategory && 
+                  증상카테고리[formData.selectedCategory][formData.selectedSubCategory].map(symptom => (
+                    <option 
+                      key={`sym-${formData.selectedCategory}-${formData.selectedSubCategory}-${symptom.name}`} 
+                      value={symptom.name}
+                    >
+                      {symptom.name}
+                    </option>
+                  ))
+                }
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
           </div>
-        </div>
-        <div className="selected-symptoms">
-          {formData.selectedSymptoms.map((symptom, index) => (
-            <span key={`selected-${index}-${symptom.replace(/\s+/g, '-')}`} className="symptom-tag">
-              {symptom}
-              <button type="button" onClick={() => removeSymptom(symptom)}>×</button>
-            </span>
-          ))}
-        </div>
-      </div>
-      {/* 복용약물 섹션 */}
-      <div className="form-section medication-section">
-        <h2 className="section-title">복용약물</h2>
-        <div className="form-row medication-row">
-          <div className="form-group medication">
-            <label className="form-label">복용 중인 약물</label>
-            <select
-              name="medication"
-              value={formData.medication}
-              onChange={handleInputChange}
-              style={getInputStyle('medication')}
-            >
-              <option key="default-medication" value="">약물을 선택하세요</option>
-              {약물카테고리.map((약물, index) => (
-                <option key={`medication-${index}-${약물}`} value={약물}>
-                  {약물}
-                </option>
-              ))}
-            </select>
-            {error && <span className="error-message">{error}</span>}
-          </div>
-          <div className="form-group preference">
-            <label className="form-label">기호식품</label>
-            <select
-              name="preference"
-              value={formData.preference}
-              onChange={handleInputChange}
-              style={getInputStyle('preference')}
-            >
-              <option key="default" value="">기호식품을 선택하세요</option>
-              {기호식품카테고리.map((기호품, index) => (
-                <option key={`preference-${index}`} value={기호품}>{기호품}</option>
-              ))}
-            </select>
-            {error && <span className="error-message">{error}</span>}
+          <div className="selected-symptoms">
+            {formData.selectedSymptoms.map((symptom, index) => (
+              <span key={`selected-${index}-${symptom.replace(/\s+/g, '-')}`} className="symptom-tag">
+                {symptom}
+                <button type="button" onClick={() => removeSymptom(symptom)}>×</button>
+              </span>
+            ))}
           </div>
         </div>
       </div>
-      {/* 메모 섹션 */}
-      <div className="form-section memo-section">
-        <h2 className="section-title">메모</h2>
-        <div className="input-row">
-          <div className="input-group">
-            <label className="form-label">메모</label>
-            <textarea
-              name="memo"
-              value={formData.memo}
-              onChange={handleInputChange}
-              placeholder="추가할 메모사항을 입력하세요"
-              style={getInputStyle('memo')}
-            />
-            {error && <span className="error-message">{error}</span>}
+
+      <div className="form-box analysis-box enhanced-box shadow-box">
+        <div className="section-marker blue"></div>
+        <div className="section-content">
+          <h2 className="section-title large-title">복용약물</h2>
+          <div className="form-row medication-row">
+            <div className="form-group medication">
+              <label className="form-label">복용 중인 약물</label>
+              <select
+                name="medication"
+                value={formData.medication}
+                onChange={handleInputChange}
+                style={getInputStyle('medication')}
+              >
+                <option key="default-medication" value="">약물을 선택하세요</option>
+                {약물카테고리.map((약물, index) => (
+                  <option key={`medication-${index}-${약물}`} value={약물}>
+                    {약물}
+                  </option>
+                ))}
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group preference">
+              <label className="form-label">기호식품</label>
+              <select
+                name="preference"
+                value={formData.preference}
+                onChange={handleInputChange}
+                style={getInputStyle('preference')}
+              >
+                <option key="default" value="">기호식품을 선택하세요</option>
+                {기호식품카테고리.map((기호품, index) => (
+                  <option key={`preference-${index}`} value={기호품}>{기호품}</option>
+                ))}
+              </select>
+              {error && <span className="error-message">{error}</span>}
+            </div>
           </div>
         </div>
       </div>
+
+      <div className="form-box analysis-box enhanced-box shadow-box">
+        <div className="section-marker purple"></div>
+        <div className="section-content">
+          <h2 className="section-title large-title">맥파분석</h2>
+          <div className="form-row file-control-row">
+            <div className="form-group button-container">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept=".xlsx,.xls"
+                style={{ display: 'none' }}
+              />
+              <button 
+                className="launch-button"
+                onClick={handleLaunchUBioMacpa}
+              >
+                유비오맥파기 실행
+              </button>
+              <button 
+                className="launch-button"
+                onClick={handleFileButtonClick}
+              >
+                유비오 맥파 데이터 가져오기
+              </button>
+              {error && <span className="error-message">{error}</span>}
+            </div>
+          </div>
+          <div className="form-row pulse-wave-row">
+            <div className="form-group">
+              <label className="form-label">a-b</label>
+              <input
+                type="text"
+                name="ab_ms"
+                value={formData.ab_ms}
+                onChange={handleInputChange}
+                style={getInputStyle('ab_ms')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">a-c</label>
+              <input
+                type="text"
+                name="ac_ms"
+                value={formData.ac_ms}
+                onChange={handleInputChange}
+                style={getInputStyle('ac_ms')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">a-d</label>
+              <input
+                type="text"
+                name="ad_ms"
+                value={formData.ad_ms}
+                onChange={handleInputChange}
+                style={getInputStyle('ad_ms')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">a-e</label>
+              <input
+                type="text"
+                name="ae_ms"
+                value={formData.ae_ms}
+                onChange={handleInputChange}
+                style={getInputStyle('ae_ms')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+          </div>
+          <div className="form-row pulse-ratio-row">
+            <div className="form-group">
+              <label className="form-label">b/a</label>
+              <input
+                type="text"
+                name="ba_ratio"
+                value={formData.ba_ratio}
+                onChange={handleInputChange}
+                style={getInputStyle('ba_ratio')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">c/a</label>
+              <input
+                type="text"
+                name="ca_ratio"
+                value={formData.ca_ratio}
+                onChange={handleInputChange}
+                style={getInputStyle('ca_ratio')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">d/a</label>
+              <input
+                type="text"
+                name="da_ratio"
+                value={formData.da_ratio}
+                onChange={handleInputChange}
+                style={getInputStyle('da_ratio')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">e/a</label>
+              <input
+                type="text"
+                name="ea_ratio"
+                value={formData.ea_ratio}
+                onChange={handleInputChange}
+                style={getInputStyle('ea_ratio')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+          </div>
+          <div className="form-row pulse-analysis-results">
+            <div className="form-group">
+              <label className="form-label">말초혈관 수축도 (PVC)</label>
+              <input
+                type="text"
+                name="pvc"
+                value={calculatePVC(formData)}
+                readOnly
+                className="analysis-result"
+                style={getInputStyle('pvc')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">혈액 점도 (BV)</label>
+              <input
+                type="text"
+                name="bv"
+                value={calculateBV(formData)}
+                readOnly
+                className="analysis-result"
+                style={getInputStyle('bv')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">일회박출량 (SV)</label>
+              <input
+                type="text"
+                name="sv"
+                value={calculateSV(formData)}
+                readOnly
+                className="analysis-result"
+                style={getInputStyle('sv')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">심박수 (HR)</label>
+              <input
+                type="text"
+                name="hr"
+                value={formData.pulse}
+                readOnly
+                className="analysis-result"
+                style={getInputStyle('hr')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="form-box analysis-box enhanced-box shadow-box">
+        <div className="section-marker purple"></div>
+        <div className="section-content">
+          <h2 className="section-title large-title">메모</h2>
+          <div className="input-row">
+            <div className="input-group">
+              <label className="form-label">메모</label>
+              <textarea
+                name="memo"
+                value={formData.memo}
+                onChange={handleInputChange}
+                placeholder="추가할 메모사항을 입력하세요"
+                style={getInputStyle('memo')}
+              />
+              {error && <span className="error-message">{error}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {/* 버튼 그룹 */}
-      <div className="button-group">
-        <button 
-          type="submit" 
-          disabled={isLoading}
-          className="button primary"
-          onClick={handleSubmit}
-        >
+      <div className="save-button-container">
+        <button type="submit" className="round-save-button" disabled={isLoading} onClick={handleSubmit}>
           {isLoading ? '저장 중...' : '저장'}
         </button>
       </div>

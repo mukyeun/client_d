@@ -419,11 +419,19 @@ const UserDataTable = () => {
       alert('삭제할 항목을 선택해주세요.');
       return;
     }
+
     if (window.confirm(`선택한 ${checkedIds.length}개 항목을 삭제하시겠습니까?`)) {
       try {
-        await Promise.all(checkedIds.map(id => deleteUserInfo(id)));
-        setCheckedIds([]);
-        await loadUserData();
+        // 현재 userData에서 선택된 항목들을 제외한 새로운 배열 생성
+        const updatedData = userData.filter(user => !checkedIds.includes(user._id));
+        
+        // localStorage 업데이트
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedData));
+        
+        // 상태 업데이트
+        setUserData(updatedData);
+        setCheckedIds([]); // 체크박스 선택 초기화
+        
         alert('삭제가 완료되었습니다.');
       } catch (error) {
         console.error('Delete error:', error);
@@ -645,8 +653,13 @@ const UserDataTable = () => {
             <button 
               onClick={handleDelete}
               className="delete-button"
+              disabled={checkedIds.length === 0}
+              style={{ 
+                width: '65px',  // 260px의 1/4 크기
+                padding: '8px 13px'  // 패딩도 1/4 크기로 조정 (52px -> 13px)
+              }}
             >
-              선택한 항목 삭제
+              삭제
             </button>
           )}
           <button onClick={loadUserData} className="refresh-button">
