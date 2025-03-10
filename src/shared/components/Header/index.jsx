@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../../styles/Header.css';
+import '../../../styles/Header.css';
 
 const Header = () => {
   return (
@@ -9,12 +9,13 @@ const Header = () => {
         <h1>SmartPulse Human</h1>
       </div>
       <div className="header-center">
-        <Link to="/">
+        <Link to="/input">
           <button>데이터 입력</button>
         </Link>
         <Link to="/data">
           <button>데이터 조회</button>
         </Link>
+        <Link to="/clinic" className="nav-link">도원한의원</Link>
       </div>
       <div className="header-right">
         {/* 필요한 경우 우측 요소 추가 */}

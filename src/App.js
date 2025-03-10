@@ -1,8 +1,9 @@
 import React, { useEffect, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
+import Header from './shared/components/Header';
 import UserInfoForm from './components/UserInfoForm';
 import UserDataTable from './components/UserDataTable';
+import PatientRegistration from './features/clinic/components/PatientRegistration';
 import './App.css';
 
 // 상수 정의
@@ -65,13 +66,15 @@ export const deleteUserInfo = async (id) => {
 
 function App() {
   return (
-    <div className="App">
+    <>
       <Header />
       <Routes>
-        <Route path="/" element={<UserInfoForm />} />
+        <Route path="/" element={<div>홈</div>} />
+        <Route path="/clinic" element={<PatientRegistration />} />
+        <Route path="/input" element={<UserInfoForm />} />
         <Route path="/data" element={<UserDataTable />} />
       </Routes>
-    </div>
+    </>
   );
 }
 
