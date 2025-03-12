@@ -16,6 +16,7 @@ const Header = () => {
           <button>데이터 조회</button>
         </Link>
         <Link to="/clinic" className="nav-link">도원한의원</Link>
+        <Link to="/clinic/appointments" className="nav-link admin-link">예약 관리</Link>
       </div>
       <div className="header-right">
         {/* 필요한 경우 우측 요소 추가 */}
