@@ -1,3 +1,31 @@
+:root {
+  /* Light mode colors */
+  --background-primary: #ffffff;
+  --background-secondary: #f5f5f5;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #dddddd;
+  --accent-color: #2196f3;
+  --error-background: #fff3cd;
+  --error-text: #856404;
+  --success-background: #d4edda;
+  --success-text: #155724;
+}
+
+:root.dark-mode {
+  /* Dark mode colors */
+  --background-primary: #1a1a1a;
+  --background-secondary: #2d2d2d;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --border-color: #404040;
+  --accent-color: #64b5f6;
+  --error-background: #442c2c;
+  --error-text: #ffb4b4;
+  --success-background: #1e4620;
+  --success-text: #a3d7a5;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -5,6 +33,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-primary);
+  color: var(--text-primary);
 }
 
 code {

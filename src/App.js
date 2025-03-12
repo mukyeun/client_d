@@ -8,6 +8,7 @@ import AppointmentManagement from './features/admin/components/AppointmentManage
 import AppointmentConfirmation from './features/clinic/components/AppointmentConfirmation';
 import AdminLogin from './features/admin/components/AdminLogin';
 import ProtectedRoute from './features/admin/components/ProtectedRoute';
+import Home from './features/home/Home';
 import './App.css';
 
 // 상수 정의
@@ -17,7 +18,7 @@ export const APPOINTMENTS_STORAGE_KEY = 'ubioAppointments';
 // API 함수들
 export const saveUserInfo = async (userData) => {
   try {
-    const existingData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+    const existingData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || '[]';
     existingData.push(userData);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(existingData));
 
@@ -36,7 +37,7 @@ export const saveUserInfo = async (userData) => {
 
 export const getAllUserInfo = async () => {
   try {
-    const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+    const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || '[]';
     return {
       success: true,
       data: localData
@@ -146,7 +147,7 @@ function App() {
     <>
       <Header />
       <Routes>
-        <Route path="/" element={<div>홈</div>} />
+        <Route path="/" element={<Home />} />
         <Route path="/clinic" element={<PatientRegistration />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route 

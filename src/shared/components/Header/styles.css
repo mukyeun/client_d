@@ -1,5 +1,5 @@
 .header {
-  background-color: #fff;
+  background-color: var(--background-primary);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 1rem;
   position: sticky;
@@ -11,32 +11,95 @@
   display: flex;
   gap: 20px;
   justify-content: center;
+  align-items: center;
   max-width: 1200px;
   margin: 0 auto;
 }
 
 .nav-link {
   text-decoration: none;
-  color: #333;
   padding: 8px 16px;
   border-radius: 4px;
   transition: all 0.2s;
+  font-weight: 500;
+  text-align: center;
+  min-width: 100px;
 }
 
-.nav-link:hover {
-  background-color: #f5f5f5;
+/* 홈 버튼 */
+.home-link {
+  background-color: #4CAF50;
+  color: white;
 }
 
+.home-link:hover {
+  background-color: #45a049;
+}
+
+/* 예약하기 버튼 */
+.reservation-link {
+  background-color: #2196F3;
+  color: white;
+}
+
+.reservation-link:hover {
+  background-color: #1976D2;
+}
+
+/* 예약 관리 버튼 */
 .admin-link {
-  background-color: #2196f3;
+  background-color: #9C27B0;
   color: white;
 }
 
 .admin-link:hover {
-  background-color: #1976d2;
+  background-color: #7B1FA2;
+}
+
+/* 정보입력 버튼 */
+.input-link {
+  background-color: #FF9800;
   color: white;
 }
 
+.input-link:hover {
+  background-color: #F57C00;
+}
+
+/* 데이터조회 버튼 */
+.data-link {
+  background-color: #E91E63;
+  color: white;
+}
+
+.data-link:hover {
+  background-color: #C2185B;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+}
+
+/* 다크 모드에서의 버튼 색상 */
+:root.dark-mode .nav-link {
+  opacity: 0.9;
+}
+
+:root.dark-mode .nav-link:hover {
+  opacity: 1;
+}
+
+/* 반응형 디자인 */
 @media (max-width: 768px) {
   .nav-menu {
     flex-wrap: wrap;
@@ -46,5 +109,23 @@
   .nav-link {
     font-size: 14px;
     padding: 6px 12px;
+    min-width: 80px;
+  }
+}
+
+/* 작은 모바일 화면 */
+@media (max-width: 480px) {
+  .nav-menu {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nav-link {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .theme-toggle {
+    margin-top: 8px;
   }
 } 

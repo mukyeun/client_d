@@ -1,26 +1,27 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../../../styles/Header.css';
+import { useDarkMode } from '../../../hooks/useDarkMode';
+import './styles.css';
 
 const Header = () => {
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
+
   return (
     <header className="header">
-      <div className="header-left">
-        <h1>SmartPulse Human</h1>
-      </div>
-      <div className="header-center">
-        <Link to="/input">
-          <button>데이터 입력</button>
-        </Link>
-        <Link to="/data">
-          <button>데이터 조회</button>
-        </Link>
-        <Link to="/clinic" className="nav-link">도원한의원</Link>
+      <nav className="nav-menu">
+        <Link to="/" className="nav-link home-link">홈</Link>
+        <Link to="/clinic" className="nav-link reservation-link">예약하기</Link>
         <Link to="/clinic/appointments" className="nav-link admin-link">예약 관리</Link>
-      </div>
-      <div className="header-right">
-        {/* 필요한 경우 우측 요소 추가 */}
-      </div>
+        <Link to="/input" className="nav-link input-link">정보입력</Link>
+        <Link to="/data" className="nav-link data-link">데이터조회</Link>
+        <button 
+          onClick={toggleDarkMode} 
+          className="theme-toggle"
+          aria-label={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
+        >
+          {isDarkMode ? '🌞' : '🌙'}
+        </button>
+      </nav>
     </header>
   );
 };
