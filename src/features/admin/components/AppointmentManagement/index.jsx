@@ -15,10 +15,18 @@ const AppointmentManagement = () => {
   const fetchAppointments = async () => {
     try {
       const response = await getAllAppointments();
-      if (response.success) {
-        let filteredAppointments = response.data;
+      console.log('Fetched appointments:', response); // 데이터 확인용 로그
+
+      if (response.success && Array.isArray(response.data)) {
+        let filteredAppointments = response.data.map(appointment => ({
+          ...appointment,
+          patientInfo: appointment.patientInfo || {},
+          appointment: appointment.appointment || {},
+          symptoms: Array.isArray(appointment.symptoms) ? appointment.symptoms : []
+        }));
+
         if (filter !== 'all') {
-          filteredAppointments = response.data.filter(
+          filteredAppointments = filteredAppointments.filter(
             appointment => appointment.status === filter
           );
         }
@@ -68,15 +76,15 @@ const AppointmentManagement = () => {
         {appointments.map(appointment => (
           <div key={appointment.id} className={`appointment-card ${appointment.status}`}>
             <div className="appointment-header">
-              <h3>{appointment.patientInfo.name}</h3>
-              <span className="status-badge">{appointment.status}</span>
+              <h3>{appointment.patientInfo?.name || '이름 없음'}</h3>
+              <span className="status-badge">{appointment.status || '상태 없음'}</span>
             </div>
             
             <div className="appointment-details">
-              <p>예약일시: {appointment.appointment.date} {appointment.appointment.time}</p>
-              <p>연락처: {appointment.patientInfo.phone}</p>
-              <p>증상: {appointment.symptoms.join(', ')}</p>
-              {appointment.appointment.memo && <p>메모: {appointment.appointment.memo}</p>}
+              <p>예약일시: {appointment.appointment?.date || '날짜 없음'} {appointment.appointment?.time || '시간 없음'}</p>
+              <p>연락처: {appointment.patientInfo?.phone || '연락처 없음'}</p>
+              <p>증상: {appointment.symptoms?.join(', ') || '증상 없음'}</p>
+              {appointment.appointment?.memo && <p>메모: {appointment.appointment.memo}</p>}
             </div>
 
             <div className="appointment-actions">

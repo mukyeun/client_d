@@ -26,53 +26,49 @@
   margin-bottom: 20px;
 }
 
-/* 왼쪽 강조 마커 */
+/* 기존 section-marker 관련 스타일 제거 */
 .section-marker {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 8px;  /* 마커 두께를 4px에서 8px로 증가 */
-  height: 100%;
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
+  display: none; /* 또는 해당 스타일 블록 전체 삭제 */
 }
 
-/* 무지개 색상의 마커 */
-.section-marker.red {
-  background-color: #FF0000;  /* 빨강 */
-}
-
-.section-marker.orange {
-  background-color: #FF8C00;  /* 주황 */
-}
-
-.section-marker.yellow {
-  background-color: #FFD700;  /* 노랑 */
-}
-
-.section-marker.green {
-  background-color: #008000;  /* 초록 */
-}
-
-.section-marker.blue {
-  background-color: #0000FF;  /* 파랑 */
-}
-
-.section-marker.navy {
-  background-color: #000080;  /* 남색 */
-}
-
-.section-marker.purple {
-  background-color: #800080;  /* 보라 */
-}
-
-/* 섹션 제목 텍스트 */
+/* 새로운 섹션 타이틀 스타일 추가 */
 .section-title {
-  font-size: 16px;  /* 글자 크기를 16px로 변경 */
-  font-weight: 700;  /* 글자 두께 증가 */
-  margin-bottom: 20px;
-  color: #333;  /* 글자색을 좀 더 진하게 */
-  letter-spacing: 1px;  /* 자간 살짝 조정 */
+  display: flex;
+  align-items: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 20px 0;
+  padding: 10px 20px;
+}
+
+.section-title i {
+  font-size: 1.5rem;
+  margin-right: 12px;
+  transition: all 0.3s ease;
+}
+
+.section-title:hover i {
+  transform: scale(1.1);
+}
+
+/* 각 섹션별 아이콘 색상 */
+.basic-info-box .section-title i { color: #3498db; }
+.physical-info-box .section-title i { color: #2ecc71; }
+.vital-signs-box .section-title i { color: #e74c3c; }
+.analysis-box .section-title i { color: #9b59b6; }
+.stress-box .section-title i { color: #e84393; }
+.symptoms-box .section-title i { color: #f39c12; }
+.medication-box .section-title i { color: #1abc9c; }
+.memo-box .section-title i { color: #7f8c8d; }
+
+@media (max-width: 768px) {
+  .section-title {
+    font-size: 1.1rem;
+    padding: 8px 15px;
+  }
+  .section-title i {
+    font-size: 1.3rem;
+  }
 }
 
 .section-title.bold {

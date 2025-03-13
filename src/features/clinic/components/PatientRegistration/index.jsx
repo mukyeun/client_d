@@ -79,34 +79,31 @@ const PatientRegistration = () => {
 
   // 주민등록번호 처리 함수
   const handleResidentNumberChange = (e) => {
-    let value = e.target.value.replace(/[^0-9]/g, ''); // 숫자만 허용
+    const { value } = e.target;
+    const numericValue = value.replace(/[^0-9]/g, '');
     
-    if (value.length <= 6) {
-      // 앞자리 6자리
-      value = value;
-    } else {
-      // 뒷자리는 첫 번째 숫자만 허용
-      value = value.slice(0, 6) + '-' + value.slice(6, 7);
-    }
-
-    // 성별 자동 설정
-    if (value.length === 8) { // 6자리 + '-' + 1자리
-      const genderDigit = parseInt(value.slice(-1));
+    if (numericValue.length <= 6) {
+      setFormData(prev => ({
+        ...prev,
+        residentNumber: numericValue
+      }));
+    } else if (numericValue.length <= 13) {
+      const formattedValue = `${numericValue.slice(0, 6)}-${numericValue.slice(6)}`;
+      
+      // 뒷자리 첫 번호로 성별 판단
+      const genderDigit = numericValue[6];
       let gender = '';
-      if (genderDigit === 1 || genderDigit === 3) {
+      
+      if (genderDigit === '1' || genderDigit === '3') {
         gender = 'male';
-      } else if (genderDigit === 2 || genderDigit === 4) {
+      } else if (genderDigit === '2' || genderDigit === '4') {
         gender = 'female';
       }
+
       setFormData(prev => ({
         ...prev,
-        residentNumber: value,
-        gender: gender
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        residentNumber: value
+        residentNumber: formattedValue,
+        gender: gender // 성별 자동 설정
       }));
     }
   };
@@ -280,8 +277,7 @@ const PatientRegistration = () => {
   return (
     <div className="registration-container">
       <form onSubmit={handleSubmit}>
-        
-        {/* 기본 정보 섹션 */}
+        {/* 1. 기본 정보 섹션 */}
         <div className="form-box analysis-box enhanced-box shadow-box">
           <div className="section-marker red"></div>
           <div className="section-content">
@@ -306,9 +302,10 @@ const PatientRegistration = () => {
                   name="residentNumber"
                   value={formData.residentNumber}
                   onChange={handleResidentNumberChange}
-                  placeholder="앞 6자리 - 뒤 1자리"
-                  maxLength="8" // 6자리 + '-' + 1자리
+                  placeholder="123456-1234567"
+                  maxLength="14"
                   style={getInputStyle('residentNumber')}
+                  required
                 />
                 {error && <span className="error-message">{error}</span>}
               </div>
@@ -331,9 +328,9 @@ const PatientRegistration = () => {
                   value={formData.gender}
                   onChange={handleInputChange}
                   style={getInputStyle('gender')}
-                  disabled // 자동 입력되므로 직접 선택 불가
+                  disabled={formData.residentNumber.length > 7} // 주민번호 입력 시 성별 선택 비활성화
                 >
-                  <option value="">선택하세요</option>
+                  <option value="">선택</option>
                   <option value="male">남성</option>
                   <option value="female">여성</option>
                 </select>
@@ -413,172 +410,7 @@ const PatientRegistration = () => {
           </div>
         </div>
 
-        {/* 증상 선택 섹션 */}
-        <div className="form-box analysis-box enhanced-box shadow-box">
-          <div className="section-marker green"></div>
-          <div className="section-content">
-            <h2 className="section-title large-title">증상 선택</h2>
-            <div className="form-row symptoms-category-row">
-              <div className="form-group category">
-                <label className="form-label">대분류</label>
-                <select 
-                  value={formData.selectedCategory} 
-                  onChange={handleCategoryChange}
-                  style={getInputStyle('selectedCategory')}
-                >
-                  <option value="">선택하세요</option>
-                  {Object.keys(증상카테고리).map(category => (
-                    <option key={`cat-${category}`} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-                {error && <span className="error-message">{error}</span>}
-              </div>
-              <div className="form-group subcategory">
-                <label className="form-label">중분류</label>
-                <select 
-                  value={formData.selectedSubCategory} 
-                  onChange={handleSubCategoryChange}
-                  style={getInputStyle('selectedSubCategory')}
-                >
-                  <option value="">선택하세요</option>
-                  {formData.selectedCategory && 
-                    Object.keys(증상카테고리[formData.selectedCategory]).map(subCategory => (
-                      <option key={`subcat-${formData.selectedCategory}-${subCategory}`} value={subCategory}>
-                        {subCategory}
-                      </option>
-                    ))
-                  }
-                </select>
-                {error && <span className="error-message">{error}</span>}
-              </div>
-              <div className="form-group symptom">
-                <label className="form-label">소분류</label>
-                <select 
-                  value={formData.selectedSymptom} 
-                  onChange={handleSymptomChange}
-                  style={getInputStyle('selectedSymptom')}
-                >
-                  <option value="">선택하세요</option>
-                  {formData.selectedSubCategory && 
-                    증상카테고리[formData.selectedCategory][formData.selectedSubCategory].map(symptom => (
-                      <option 
-                        key={`sym-${formData.selectedCategory}-${formData.selectedSubCategory}-${symptom.name}`} 
-                        value={symptom.name}
-                      >
-                        {symptom.name}
-                      </option>
-                    ))
-                  }
-                </select>
-                {error && <span className="error-message">{error}</span>}
-              </div>
-            </div>
-            
-            <div className="selected-symptoms">
-              {formData.selectedSymptoms.map((symptom, index) => (
-                <span 
-                  key={`selected-${index}-${symptom.replace(/\s+/g, '-')}`} 
-                  className="symptom-tag"
-                >
-                  {symptom}
-                  <button 
-                    type="button" 
-                    onClick={() => removeSymptom(symptom)}
-                    className="remove-symptom"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 복용약물 및 기호식품 섹션 */}
-        <div className="form-box analysis-box enhanced-box shadow-box">
-          <div className="section-marker blue"></div>
-          <div className="section-content">
-            <h2 className="section-title large-title">복용약물</h2>
-            <div className="form-row medication-row">
-              <div className="form-group medication">
-                <label className="form-label">복용 중인 약물</label>
-                <select
-                  name="medication"
-                  value={formData.medication}
-                  onChange={handleMedicationChange}
-                  style={getInputStyle('medication')}
-                >
-                  <option value="">약물을 선택하세요</option>
-                  {약물카테고리.map((약물, index) => (
-                    <option key={`medication-${index}-${약물}`} value={약물}>
-                      {약물}
-                    </option>
-                  ))}
-                </select>
-                {error && <span className="error-message">{error}</span>}
-              </div>
-              <div className="form-group preference">
-                <label className="form-label">기호식품</label>
-                <select
-                  name="preference"
-                  value={formData.preference}
-                  onChange={handlePreferenceChange}
-                  style={getInputStyle('preference')}
-                >
-                  <option value="">기호식품을 선택하세요</option>
-                  {기호식품카테고리.map((기호품, index) => (
-                    <option key={`preference-${index}`} value={기호품}>{기호품}</option>
-                  ))}
-                </select>
-                {error && <span className="error-message">{error}</span>}
-              </div>
-            </div>
-
-            {/* 선택된 약물 태그들 */}
-            <div className="selected-items">
-              <div className="selected-medications">
-                {formData.selectedMedications.map((medication, index) => (
-                  <span 
-                    key={`selected-med-${index}-${medication.replace(/\s+/g, '-')}`} 
-                    className="symptom-tag"
-                  >
-                    {medication}
-                    <button 
-                      type="button" 
-                      onClick={() => removeMedication(medication)}
-                      className="remove-symptom"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              {/* 선택된 기호식품 태그들 */}
-              <div className="selected-preferences">
-                {formData.selectedPreferences.map((preference, index) => (
-                  <span 
-                    key={`selected-pref-${index}-${preference.replace(/\s+/g, '-')}`} 
-                    className="symptom-tag"
-                  >
-                    {preference}
-                    <button 
-                      type="button" 
-                      onClick={() => removePreference(preference)}
-                      className="remove-symptom"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 스트레스 평가 섹션 */}
+        {/* 2. 스트레스 평가 섹션 */}
         <div className="form-box analysis-box enhanced-box shadow-box">
           <div className="section-marker orange"></div>
           <div className="section-content">
@@ -673,9 +505,174 @@ const PatientRegistration = () => {
           </div>
         </div>
 
-        {/* 예약 정보 섹션 */}
+        {/* 3. 증상 선택 섹션 */}
         <div className="form-box analysis-box enhanced-box shadow-box">
-          <div className="section-marker purple"></div>
+          <div className="section-marker yellow"></div>
+          <div className="section-content">
+            <h2 className="section-title large-title">증상 선택</h2>
+            <div className="form-row symptoms-category-row">
+              <div className="form-group category">
+                <label className="form-label">대분류</label>
+                <select 
+                  value={formData.selectedCategory} 
+                  onChange={handleCategoryChange}
+                  style={getInputStyle('selectedCategory')}
+                >
+                  <option value="">선택하세요</option>
+                  {Object.keys(증상카테고리).map(category => (
+                    <option key={`cat-${category}`} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                {error && <span className="error-message">{error}</span>}
+              </div>
+              <div className="form-group subcategory">
+                <label className="form-label">중분류</label>
+                <select 
+                  value={formData.selectedSubCategory} 
+                  onChange={handleSubCategoryChange}
+                  style={getInputStyle('selectedSubCategory')}
+                >
+                  <option value="">선택하세요</option>
+                  {formData.selectedCategory && 
+                    Object.keys(증상카테고리[formData.selectedCategory]).map(subCategory => (
+                      <option key={`subcat-${formData.selectedCategory}-${subCategory}`} value={subCategory}>
+                        {subCategory}
+                      </option>
+                    ))
+                  }
+                </select>
+                {error && <span className="error-message">{error}</span>}
+              </div>
+              <div className="form-group symptom">
+                <label className="form-label">소분류</label>
+                <select 
+                  value={formData.selectedSymptom} 
+                  onChange={handleSymptomChange}
+                  style={getInputStyle('selectedSymptom')}
+                >
+                  <option value="">선택하세요</option>
+                  {formData.selectedSubCategory && 
+                    증상카테고리[formData.selectedCategory][formData.selectedSubCategory].map(symptom => (
+                      <option 
+                        key={`sym-${formData.selectedCategory}-${formData.selectedSubCategory}-${symptom.name}`} 
+                        value={symptom.name}
+                      >
+                        {symptom.name}
+                      </option>
+                    ))
+                  }
+                </select>
+                {error && <span className="error-message">{error}</span>}
+              </div>
+            </div>
+            
+            <div className="selected-symptoms">
+              {formData.selectedSymptoms.map((symptom, index) => (
+                <span 
+                  key={`selected-${index}-${symptom.replace(/\s+/g, '-')}`} 
+                  className="symptom-tag"
+                >
+                  {symptom}
+                  <button 
+                    type="button" 
+                    onClick={() => removeSymptom(symptom)}
+                    className="remove-symptom"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 4. 복용약물 섹션 */}
+        <div className="form-box analysis-box enhanced-box shadow-box">
+          <div className="section-marker green"></div>
+          <div className="section-content">
+            <h2 className="section-title large-title">복용약물</h2>
+            <div className="form-row medication-row">
+              <div className="form-group medication">
+                <label className="form-label">복용 중인 약물</label>
+                <select
+                  name="medication"
+                  value={formData.medication}
+                  onChange={handleMedicationChange}
+                  style={getInputStyle('medication')}
+                >
+                  <option value="">약물을 선택하세요</option>
+                  {약물카테고리.map((약물, index) => (
+                    <option key={`medication-${index}-${약물}`} value={약물}>
+                      {약물}
+                    </option>
+                  ))}
+                </select>
+                {error && <span className="error-message">{error}</span>}
+              </div>
+              <div className="form-group preference">
+                <label className="form-label">기호식품</label>
+                <select
+                  name="preference"
+                  value={formData.preference}
+                  onChange={handlePreferenceChange}
+                  style={getInputStyle('preference')}
+                >
+                  <option value="">기호식품을 선택하세요</option>
+                  {기호식품카테고리.map((기호품, index) => (
+                    <option key={`preference-${index}`} value={기호품}>{기호품}</option>
+                  ))}
+                </select>
+                {error && <span className="error-message">{error}</span>}
+              </div>
+            </div>
+
+            {/* 선택된 약물 태그들 */}
+            <div className="selected-items">
+              <div className="selected-medications">
+                {formData.selectedMedications.map((medication, index) => (
+                  <span 
+                    key={`selected-med-${index}-${medication.replace(/\s+/g, '-')}`} 
+                    className="symptom-tag"
+                  >
+                    {medication}
+                    <button 
+                      type="button" 
+                      onClick={() => removeMedication(medication)}
+                      className="remove-symptom"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* 선택된 기호식품 태그들 */}
+              <div className="selected-preferences">
+                {formData.selectedPreferences.map((preference, index) => (
+                  <span 
+                    key={`selected-pref-${index}-${preference.replace(/\s+/g, '-')}`} 
+                    className="symptom-tag"
+                  >
+                    {preference}
+                    <button 
+                      type="button" 
+                      onClick={() => removePreference(preference)}
+                      className="remove-symptom"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. 예약 정보 섹션 */}
+        <div className="form-box analysis-box enhanced-box shadow-box">
+          <div className="section-marker blue"></div>
           <div className="section-content">
             <h2 className="section-title large-title">예약 정보</h2>
             <div className="input-row">
@@ -722,16 +719,39 @@ const PatientRegistration = () => {
           </div>
         </div>
 
-        <div className="submit-button-container">
-          <button type="submit" className="submit-button">
-            예약/접수 완료
+        {/* 제출 버튼 */}
+        <div className="submit-section" style={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginTop: '30px',
+          marginBottom: '30px'
+        }}>
+          <button 
+            type="submit" 
+            className="submit-button"
+            style={{
+              padding: '12px 40px',
+              fontSize: '1.1rem',
+              borderRadius: '5px',
+              border: 'none',
+              backgroundColor: '#4A90E2',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s'
+            }}
+          >
+            예약하기
           </button>
         </div>
-        
-        {error && <div className="error-message">{error}</div>}
       </form>
     </div>
   );
 };
 
 export default PatientRegistration; 
+
+<style jsx>{`
+  .submit-button:hover {
+    background-color: #357ABD;
+  }
+`}</style> 
