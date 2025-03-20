@@ -1,63 +1,318 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './styles.css';
-import { 
-  증상카테고리, 
-  약물카테고리, 
-  기호식품카테고리, 
-  스트레스카테고리,
-  evaluateStressLevel 
-} from '../../../../shared/data/categories';
+import { 증상카테고리 } from '../../../../data/symptoms';
+import { 약물카테고리 } from '../../../../data/medications';
+import { 기호식품카테고리 } from '../../../../data/preferences';
+import { 스트레스카테고리, evaluateStressLevel } from '../../../../data/stressEvents';
 import { saveAppointment } from '../../../../App';
+import userInfoIcon from '../../../../assets/icons/user-info.svg';
+import stressIcon from '../../../../assets/icons/stress.svg';
+import symptomsIcon from '../../../../assets/icons/symptoms.svg';
+import medicationIcon from '../../../../assets/icons/medication.svg';
+import memoIcon from '../../../../assets/icons/memo.svg';
 
-const PatientRegistration = () => {
+// 카테고리 데이터 안전 처리
+const safeCategories = {
+  증상카테고리: 증상카테고리 || {},
+  약물카테고리: 약물카테고리 || [],
+  기호식품카테고리: 기호식품카테고리 || [],
+  스트레스카테고리: 스트레스카테고리 || []
+};
+
+// 예약 가능 시간대 정의를 상수로 명확하게 설정
+const AVAILABLE_TIME_SLOTS = [
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30'
+];
+
+const PatientRegistration = ({ onAppointmentCreated }) => {
   const navigate = useNavigate();
+  
+  // 스트레스카테고리 상태 추가
+  const [stressCategories, setStressCategories] = useState([]);
+  
   const [formData, setFormData] = useState({
-    // 기본 정보
     name: '',
-    residentNumber: '',
     phone: '',
+    residentNumber: '',
     gender: '',
     height: '',
     weight: '',
-    bmi: '',
-
-    // 건강 상태
+    memo: '',
+    appointmentDate: '',
+    appointmentTime: '',
     personality: '',
-    stress: '',
     workIntensity: '',
-    
-    // 증상
+    bmi: '',
     selectedCategory: '',
     selectedSubCategory: '',
     selectedSymptom: '',
     selectedSymptoms: [],
-    
-    // 약물 및 기호식품
-    medication: '',
-    selectedMedications: [],    // 선택된 약물들
-    preference: '',
-    selectedPreferences: [],    // 선택된 기호식품들
-    
-    // 스트레스
+    selectedStressCategory: '',
     selectedStressEvents: [],
-    stressScore: 0,
+    totalStressScore: 0,
     stressLevel: '',
-    
-    // 예약 정보
-    appointmentDate: '',
-    appointmentTime: '',
-    memo: '',
-
-    selectedStressCategory: '',      // 선택된 스트레스 대분류
-    totalStressScore: 0,            // 총 스트레스 점수
+    medication: '',
+    selectedMedications: [],
+    preference: '',
+    selectedPreferences: []
   });
 
   const [error, setError] = useState('');
 
+  // 영업 시간 설정
+  const BUSINESS_HOURS = {
+    start: '09:00',
+    end: '18:00',
+    interval: 30
+  };
+
+  const [availableTimeSlots, setAvailableTimeSlots] = useState(AVAILABLE_TIME_SLOTS);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+
+  // 제출 상태 추가
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 스트레스카테고리 데이터 로드
+  useEffect(() => {
+    console.log('Imported 스트레스카테고리:', 스트레스카테고리);
+    if (스트레스카테고리) {
+      setStressCategories(스트레스카테고리);
+    }
+  }, []);
+
+  // API 함수들을 하나의 객체로 관리
+  const api = {
+    // 기존의 checkAvailability 함수
+    checkAvailability: async (params) => {
+      try {
+        // 파라미터 유효성 검사 추가
+        if (!params.date || !params.time) {
+          throw new Error('날짜와 시간이 필요합니다.');
+        }
+
+        // 요청 전 상세 로깅
+        console.log('📢 API 요청 상세:', {
+          endpoint: 'http://localhost:5003/api/appointments/check',
+          params: {
+            appointmentDate: params.date,
+            appointmentTime: params.time
+          }
+        });
+
+        const response = await axios.get('http://localhost:5003/api/appointments/check', { 
+          params: {
+            appointmentDate: params.date,
+            appointmentTime: params.time
+          },
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        // 응답 데이터 검증 및 로깅
+        console.log('✅ API 응답 전체:', response);
+        console.log('✅ API 응답 데이터:', response.data);
+        
+        if (!response.data) {
+          throw new Error('서버 응답이 없습니다.');
+        }
+
+        return response.data;
+      } catch (error) {
+        // 에러 상세 정보 로깅
+        console.error('❌ API 오류 상세:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          params: params
+        });
+        throw new Error(error.response?.data?.message || error.message || '서버 오류가 발생했습니다.');
+      }
+    },
+
+    // 환자 정보 저장 함수 추가
+    savePatientInfo: async (patientData) => {
+      try {
+        console.log('📢 환자 정보 저장 요청:', patientData);
+        
+        const response = await axios.post(
+          'http://localhost:5003/api/patients', 
+          patientData,
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.log('✅ 환자 정보 저장 응답:', response.data);
+        
+        if (response.data.status === 'existing') {
+          const confirmContinue = window.confirm(
+            '이미 등록된 환자입니다. 해당 환자로 예약을 진행하시겠습니까?'
+          );
+          
+          if (!confirmContinue) {
+            throw new Error('예약이 취소되었습니다.');
+          }
+          
+          return {
+            status: 'success',
+            patient: response.data.patient
+          };
+        }
+        
+        return {
+          status: 'success',
+          patient: response.data.patient
+        };
+      } catch (error) {
+        console.error('❌ 환자 정보 저장 오류:', error.response?.data || error);
+        throw error;
+      }
+    },
+
+    createAppointment: async (data) => {
+      try {
+        // 시간 형식 검증 및 변환
+        const formattedTime = formatTime(data.time);
+        if (!formattedTime) {
+          throw new Error('올바른 시간 형식이 아닙니다. (예: 09:00, 13:30)');
+        }
+
+        const requestData = {
+          ...data,
+          time: formattedTime
+        };
+
+        console.log('📢 예약 생성 요청 데이터:', requestData);
+
+        const response = await axios.post(
+          'http://localhost:5003/api/appointments',
+          requestData
+        );
+        
+        console.log('✅ 예약 생성 응답:', response.data);
+        
+        if (response.data.status === 'success') {
+          const { appointment, appointments } = response.data;
+          console.log('📋 생성된 예약:', appointment);
+          console.log('📋 전체 예약 목록:', appointments || '🔴 예약 목록 없음');
+          
+          return {
+            status: 'success',
+            appointment: appointment || null,
+            appointments: appointments || [] // undefined일 경우 빈 배열 반환
+          };
+        }
+        
+        throw new Error(response.data?.message || '예약 생성 중 오류가 발생했습니다.');
+      } catch (error) {
+        console.error('❌ 예약 생성 오류:', error.response?.data || error);
+        throw error;
+      }
+    }
+  };
+
+  // 시간 포맷 함수 수정
+  const formatTime = (time) => {
+    if (!time) return null;
+    
+    if (/^\d{2}:\d{2}$/.test(time)) {
+      return time;
+    }
+    
+    const match = time.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      const [_, hours, minutes] = match;
+      return `${hours.padStart(2, '0')}:${minutes}`;
+    }
+    
+    console.error('🚨 잘못된 시간 형식:', time);
+    return null;
+  };
+
+  // 예약 가능 여부 확인
+  const checkAppointmentAvailability = async (date, time) => {
+    try {
+      // 입력값 상세 로깅
+      console.log('📝 입력값 확인:', {
+        rawDate: date,
+        rawTime: time,
+        dateType: typeof date,
+        timeType: typeof time
+      });
+
+      // 입력값 검증 강화
+      if (!date || typeof date !== 'string' || !date.trim()) {
+        throw new Error('유효한 날짜를 입력해주세요.');
+      }
+
+      if (!time || typeof time !== 'string' || !time.trim()) {
+        throw new Error('유효한 시간을 입력해주세요.');
+      }
+
+      const formattedTime = formatTime(time);
+      if (!formattedTime) {
+        throw new Error('올바른 시간 형식이 아닙니다. (예: 09:00, 13:30)');
+      }
+
+      const trimmedDate = date.trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
+        throw new Error('올바른 날짜 형식이 아닙니다. (예: 2025-03-24)');
+      }
+
+      // API 요청 전 최종 데이터 확인
+      console.log('📢 [프론트] 최종 요청 데이터:', {
+        trimmedDate,
+        formattedTime,
+        originalDate: date,
+        originalTime: time
+      });
+
+      const response = await api.checkAvailability({
+        date: trimmedDate,
+        time: formattedTime
+      });
+
+      console.log('✅ [프론트] 예약 확인 응답:', response);
+
+      return response.available === true;
+
+    } catch (error) {
+      console.error('❌ [프론트] 예약 확인 오류:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        originalError: error
+      });
+      throw error;
+    }
+  };
+
+  // 필수 입력 필드 검사
+  const validateRequiredFields = () => {
+    const required = ['name', 'phone', 'residentNumber', 'gender', 'appointmentDate', 'appointmentTime'];
+    const missing = required.filter(field => !formData[field]);
+    
+    if (missing.length > 0) {
+      alert(`다음 필수 항목을 입력해주세요: ${missing.join(', ')}`);
+      return false;
+    }
+    return true;
+  };
+
   // 입력값 변경 처리
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // 날짜가 변경되면 예약 가능한 시간대 조회
+    if (name === 'appointmentDate' && value) {
+      fetchAvailableTimeSlots(value);
+    }
+    
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
       
@@ -130,11 +385,6 @@ const PatientRegistration = () => {
 
   const handleSymptomChange = (e) => {
     const symptom = e.target.value;
-    setFormData(prev => ({
-      ...prev,
-      selectedSymptom: symptom
-    }));
-    
     if (symptom && !formData.selectedSymptoms.includes(symptom)) {
       setFormData(prev => ({
         ...prev,
@@ -151,25 +401,46 @@ const PatientRegistration = () => {
     }));
   };
 
+  // 스트레스 대분류 선택 핸들러
+  const handleStressCategoryChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedStressCategory: e.target.value
+    }));
+  };
+
   // 스트레스 이벤트 선택 핸들러
-  const handleStressEventChange = (event) => {
-    const updatedEvents = formData.selectedStressEvents.includes(event)
-      ? formData.selectedStressEvents.filter(e => e !== event)
-      : [...formData.selectedStressEvents, event];
+  const handleStressEventChange = (e) => {
+    if (!e.target.value) return;
+    
+    const selectedEvent = JSON.parse(e.target.value);
+    if (!formData.selectedStressEvents.some(event => event.name === selectedEvent.name)) {
+      const updatedEvents = [...formData.selectedStressEvents, selectedEvent];
+      const totalScore = updatedEvents.reduce((sum, event) => sum + event.score, 0);
+      const stressLevel = evaluateStressLevel(totalScore);
+      
+      setFormData(prev => ({
+        ...prev,
+        selectedStressEvents: updatedEvents,
+        totalStressScore: totalScore,
+        stressLevel: stressLevel.level
+      }));
+    }
+  };
 
-    // 총점 계산
-    const totalScore = updatedEvents.reduce((sum, event) => {
-      return sum + event.score;
-    }, 0);
-
-    // 스트레스 수준 평가
-    const stressEvaluation = evaluateStressLevel(totalScore);
+  // 선택된 스트레스 이벤트 제거
+  const removeStressEvent = (eventToRemove) => {
+    const updatedEvents = formData.selectedStressEvents.filter(
+      event => event.name !== eventToRemove.name
+    );
+    const totalScore = updatedEvents.reduce((sum, event) => sum + event.score, 0);
+    const stressLevel = evaluateStressLevel(totalScore);
 
     setFormData(prev => ({
       ...prev,
       selectedStressEvents: updatedEvents,
       totalStressScore: totalScore,
-      stressLevel: stressEvaluation
+      stressLevel: stressLevel.level
     }));
   };
 
@@ -223,51 +494,213 @@ const PatientRegistration = () => {
     }));
   };
 
-  // 폼 제출 처리
+  // API 호출 함수 분리
+  const createAppointment = async (appointmentData) => {
+    try {
+      const response = await axios.post(
+        'http://localhost:5003/api/appointments',
+        appointmentData
+      );
+      
+      console.log('✅ 예약 생성 응답:', response.data);
+      
+      if (response.data.status === 'success') {
+        const { appointment, appointments } = response.data;
+        console.log('📋 생성된 예약:', appointment);
+        console.log('📋 전체 예약 목록:', appointments);
+        
+        if (!appointments) {
+          console.warn('⚠️ 예약 목록이 없습니다.');
+        }
+        
+        return {
+          status: 'success',
+          appointment: appointment || null,
+          appointments: appointments || []
+        };
+      }
+      
+      return {
+        status: 'error',
+        message: response.data.message || '예약 생성에 실패했습니다.'
+      };
+    } catch (error) {
+      console.error('❌ 예약 생성 오류:', error.response?.data || error);
+      
+      if (error.response?.status === 409) {
+        const errorData = error.response.data;
+        const { message, details } = errorData || {};
+        
+        const bookedTimesText = details?.bookedTimes
+          ? details.bookedTimes
+              .sort()
+              .map(time => `- ${time}`)
+              .join('\n')
+          : '- ' + appointmentData.time;
+        
+        const confirmMessage = [
+          message || '해당 시간에 이미 예약이 존재합니다.',
+          '',
+          '예약된 시간:',
+          bookedTimesText,
+          '',
+          '다른 시간을 선택하시겠습니까?'
+        ].join('\n');
+        
+        const userChoice = window.confirm(confirmMessage);
+        
+        if (userChoice) {
+          const timeInput = document.querySelector('input[name="appointmentTime"]');
+          if (timeInput) {
+            timeInput.focus();
+            timeInput.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            });
+            
+            timeInput.style.backgroundColor = '#fff3cd';
+            setTimeout(() => {
+              timeInput.style.backgroundColor = '';
+            }, 2000);
+          }
+          return { status: 'retry' };
+        }
+        
+        return { 
+          status: 'cancelled', 
+          message: '예약이 취소되었습니다.' 
+        };
+      }
+      
+      return {
+        status: 'error',
+        message: error.response?.data?.message || '예약 생성 중 오류가 발생했습니다.'
+      };
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!validateRequiredFields()) {
+      return;
+    }
+
     try {
-      const appointmentData = {
-        patientInfo: {
-          name: formData.name,
-          residentNumber: formData.residentNumber,
-          phone: formData.phone,
-          gender: formData.gender,
-          personality: formData.personality,
-          workIntensity: formData.workIntensity,
-          height: formData.height,
-          weight: formData.weight,
-          bmi: formData.bmi
-        },
-        symptoms: formData.selectedSymptoms,
-        medications: formData.selectedMedications,
-        preferences: formData.selectedPreferences,
-        stressItems: formData.selectedStressEvents,
-        appointment: {
+      setIsSubmitting(true);
+      setError(null);
+
+      // 1. 환자 정보 저장
+      const patientResponse = await api.savePatientInfo({
+        name: formData.name,
+        phone: formData.phone,
+        residentNumber: formData.residentNumber,
+        gender: formData.gender
+      });
+
+      if (patientResponse.status === 'success') {
+        // 2. 예약 정보 생성
+        const appointmentData = {
+          patientId: patientResponse.patient._id,
           date: formData.appointmentDate,
           time: formData.appointmentTime,
+          symptoms: formData.selectedSymptoms,
+          medications: formData.selectedMedications,
+          stressEvents: formData.selectedStressEvents,
           memo: formData.memo
+        };
+
+        const appointmentResponse = await api.createAppointment(appointmentData);
+
+        if (appointmentResponse.status === 'success') {
+          // 3. 예약 확인 페이지로 이동
+          navigate('/clinic/appointment-confirmation', {
+            state: {
+              appointmentData: appointmentResponse.appointment,
+              patientData: patientResponse.patient
+            },
+            replace: true // 뒤로 가기 방지
+          });
+          return; // 함수 종료
         }
-      };
-
-      const response = await saveAppointment(appointmentData);
-
-      if (response.success) {
-        navigate('/clinic/appointment-confirmation', { 
-          state: { appointmentId: response.data.id } 
-        });
-      } else {
-        setError('예약 저장에 실패했습니다.');
       }
     } catch (error) {
-      setError('예약 접수 중 오류가 발생했습니다. 다시 시도해 주세요.');
-      console.error('Appointment submission error:', error);
+      console.error('예약 처리 중 오류 발생:', error);
+      setError(error.response?.data?.message || '예약 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // 스트레스 점수 계산 함수
+  const calculateTotalStressScore = (scores) => {
+    return Object.values(scores).reduce((total, score) => total + Number(score || 0), 0);
+  };
+
+  // 스트레스 레벨 결정 함수
+  const determineStressLevel = (scores) => {
+    const total = calculateTotalStressScore(scores);
+    if (total >= 15) return '높음';
+    if (total >= 8) return '중간';
+    return '낮음';
   };
 
   // 현재 날짜 구하기
   const today = new Date().toISOString().split('T')[0];
+
+  // 선택된 날짜의 예약 가능한 시간대 조회
+  const fetchAvailableTimeSlots = async (selectedDate) => {
+    if (!selectedDate) return;
+    
+    setIsCheckingAvailability(true);
+    try {
+      // 초기에 모든 시간대를 사용 가능으로 설정
+      setAvailableTimeSlots(AVAILABLE_TIME_SLOTS);
+
+      // 해당 날짜의 모든 시간대 확인
+      const availabilityPromises = AVAILABLE_TIME_SLOTS.map(async (time) => {
+        try {
+          const formattedTime = formatTime(time);
+          if (!formattedTime) {
+            console.error(`잘못된 시간 형식: ${time}`);
+            return { time, available: false };
+          }
+
+          console.log('예약 확인 요청:', {
+            date: selectedDate,
+            time: formattedTime
+          });
+
+          const response = await api.checkAvailability({
+            date: selectedDate.trim(),
+            time: formattedTime.trim()
+          });
+
+          return {
+            time,
+            available: response.available
+          };
+        } catch (error) {
+          console.error(`시간대 ${time} 확인 중 오류:`, error);
+          return { time, available: true }; // 오류 시 기본적으로 가능하다고 설정
+        }
+      });
+
+      const results = await Promise.all(availabilityPromises);
+      const availableTimes = results
+        .filter(result => result.available)
+        .map(result => result.time);
+
+      console.log('사용 가능한 시간대:', availableTimes);
+      setAvailableTimeSlots(availableTimes);
+    } catch (error) {
+      console.error('예약 가능 시간 조회 중 오류:', error);
+      // 오류 발생 시 기본 시간대 표시
+      setAvailableTimeSlots(AVAILABLE_TIME_SLOTS);
+    } finally {
+      setIsCheckingAvailability(false);
+    }
+  };
 
   const getInputStyle = (fieldName) => {
     // 필요한 스타일링 로직 추가
@@ -275,13 +708,16 @@ const PatientRegistration = () => {
   };
 
   return (
-    <div className="registration-container">
+    <div className="patient-registration">
       <form onSubmit={handleSubmit}>
         {/* 1. 기본 정보 섹션 */}
         <div className="form-box analysis-box enhanced-box shadow-box">
           <div className="section-marker red"></div>
           <div className="section-content">
-            <h2 className="section-title large-title">기본 정보</h2>
+            <h2 className="section-title large-title">
+              <img src={userInfoIcon} alt="" className="section-icon" />
+              <span>기본 정보</span>
+            </h2>
             <div className="input-row">
               <div className="input-group">
                 <label className="form-label required">이름</label>
@@ -414,94 +850,83 @@ const PatientRegistration = () => {
         <div className="form-box analysis-box enhanced-box shadow-box">
           <div className="section-marker orange"></div>
           <div className="section-content">
-            <h2 className="section-title large-title">스트레스 평가</h2>
-            <div className="input-row">
-              <div className="input-group">
-                <label className="form-label">스트레스 대분류</label>
-                <select
-                  className="form-select"
-                  value={formData.selectedStressCategory}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    selectedStressCategory: e.target.value
-                  }))}
-                >
-                  <option value="">선택하세요</option>
-                  {스트레스카테고리.map((category, index) => (
-                    <option key={index} value={category.대분류}>
-                      {category.대분류}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="form-label">스트레스 항목</label>
-                <select
-                  className="form-select"
-                  onChange={(e) => {
-                    const item = JSON.parse(e.target.value);
-                    setFormData(prev => ({
-                      ...prev,
-                      selectedStressEvents: [item],
-                      totalStressScore: item.score,
-                      stressLevel: evaluateStressLevel(item.score)
-                    }));
-                  }}
-                  disabled={!formData.selectedStressCategory}
-                >
-                  <option value="">선택하세요</option>
-                  {formData.selectedStressCategory && 스트레스카테고리
-                    .find(category => category.대분류 === formData.selectedStressCategory)
-                    ?.중분류.map((item, index) => (
-                      <option key={index} value={JSON.stringify(item)}>
-                        {item.name} ({item.score}점)
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </div>
-
-            {formData.selectedStressEvents.length > 0 && (
-              <div className="selected-items">
-                <div className="selected-items-list">
-                  {formData.selectedStressEvents.map((item, index) => (
-                    <span 
-                      key={index} 
-                      className="symptom-tag"
+            <h2 className="section-title large-title">
+              <img src={stressIcon} alt="" className="section-icon" />
+              <span>스트레스 평가</span>
+            </h2>
+            <div className="form-group stress-assessment">
+              <div className="stress-select-container">
+                {/* 스트레스 대분류 선택 */}
+                <div className="stress-select-row">
+                  <span className="form-label">스트레스 대분류</span>
+                  <div className="select-wrapper">
+                    <select
+                      value={formData.selectedStressCategory}
+                      onChange={handleStressCategoryChange}
+                      style={getInputStyle('stressCategory')}
                     >
-                      {item.name} ({item.score}점)
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            selectedStressEvents: prev.selectedStressEvents.filter((_, i) => i !== index)
-                          }));
-                        }}
-                        className="remove-symptom"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+                      <option value="">선택하세요</option>
+                      {스트레스카테고리?.map((category, idx) => (
+                        <option key={`stress-category-${idx}`} value={category.대분류}>
+                          {category.대분류}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="stress-evaluation">
-                  {(() => {
-                    const totalScore = formData.selectedStressEvents.reduce((sum, item) => sum + item.score, 0);
-                    const evaluation = evaluateStressLevel(totalScore);
-                    return (
-                      <>
-                        <div className="stress-total">총점: {totalScore}점</div>
-                        <div className="stress-level">
-                          스트레스 수준: <span className={`level-${evaluation.level}`}>{evaluation.level}</span>
-                          <div className="level-description">({evaluation.description})</div>
-                        </div>
-                      </>
-                    );
-                  })()}
+
+                {/* 스트레스 소분류(이벤트) 선택 */}
+                <div className="stress-select-row">
+                  <span className="form-label">스트레스 소분류</span>
+                  <div className="select-wrapper">
+                    <select
+                      value=""
+                      onChange={handleStressEventChange}
+                      disabled={!formData.selectedStressCategory}
+                      style={getInputStyle('stressEvents')}
+                    >
+                      <option value="">선택하세요</option>
+                      {formData.selectedStressCategory && 
+                        스트레스카테고리
+                            ?.find(category => category.대분류 === formData.selectedStressCategory)
+                            ?.중분류?.map((event, eventIdx) => (
+                              <option 
+                                key={`stress-event-${eventIdx}`}
+                                value={JSON.stringify(event)}
+                              >
+                                {event.name} ({event.score}점)
+                              </option>
+                            ))
+                      }
+                    </select>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* 선택된 스트레스 이벤트 표시 */}
+              <div className="selected-stress-events">
+                {formData.selectedStressEvents?.map((event, index) => (
+                  <span key={`selected-stress-${index}`} className="stress-event-tag">
+                    {event.name} ({event.score}점)
+                    <button 
+                      type="button" 
+                      onClick={() => removeStressEvent(event)}
+                      className="remove-event"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* 총점 및 스트레스 수준 표시 */}
+              {formData.selectedStressEvents?.length > 0 && (
+                <div className="stress-summary">
+                  <p>총점: {formData.totalStressScore}점</p>
+                  <p>스트레스 수준: {formData.stressLevel}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -509,7 +934,10 @@ const PatientRegistration = () => {
         <div className="form-box analysis-box enhanced-box shadow-box">
           <div className="section-marker yellow"></div>
           <div className="section-content">
-            <h2 className="section-title large-title">증상 선택</h2>
+            <h2 className="section-title large-title">
+              <img src={symptomsIcon} alt="" className="section-icon" />
+              <span>증상 선택</span>
+            </h2>
             <div className="form-row symptoms-category-row">
               <div className="form-group category">
                 <label className="form-label">대분류</label>
@@ -519,13 +947,12 @@ const PatientRegistration = () => {
                   style={getInputStyle('selectedCategory')}
                 >
                   <option value="">선택하세요</option>
-                  {Object.keys(증상카테고리).map(category => (
+                  {Object.keys(safeCategories.증상카테고리).map(category => (
                     <option key={`cat-${category}`} value={category}>
                       {category}
                     </option>
                   ))}
                 </select>
-                {error && <span className="error-message">{error}</span>}
               </div>
               <div className="form-group subcategory">
                 <label className="form-label">중분류</label>
@@ -536,14 +963,13 @@ const PatientRegistration = () => {
                 >
                   <option value="">선택하세요</option>
                   {formData.selectedCategory && 
-                    Object.keys(증상카테고리[formData.selectedCategory]).map(subCategory => (
+                    Object.keys(safeCategories.증상카테고리[formData.selectedCategory] || {}).map(subCategory => (
                       <option key={`subcat-${formData.selectedCategory}-${subCategory}`} value={subCategory}>
                         {subCategory}
                       </option>
                     ))
                   }
                 </select>
-                {error && <span className="error-message">{error}</span>}
               </div>
               <div className="form-group symptom">
                 <label className="form-label">소분류</label>
@@ -554,7 +980,7 @@ const PatientRegistration = () => {
                 >
                   <option value="">선택하세요</option>
                   {formData.selectedSubCategory && 
-                    증상카테고리[formData.selectedCategory][formData.selectedSubCategory].map(symptom => (
+                    safeCategories.증상카테고리[formData.selectedCategory]?.[formData.selectedSubCategory]?.map(symptom => (
                       <option 
                         key={`sym-${formData.selectedCategory}-${formData.selectedSubCategory}-${symptom.name}`} 
                         value={symptom.name}
@@ -564,12 +990,11 @@ const PatientRegistration = () => {
                     ))
                   }
                 </select>
-                {error && <span className="error-message">{error}</span>}
               </div>
             </div>
             
             <div className="selected-symptoms">
-              {formData.selectedSymptoms.map((symptom, index) => (
+              {formData.selectedSymptoms?.map((symptom, index) => (
                 <span 
                   key={`selected-${index}-${symptom.replace(/\s+/g, '-')}`} 
                   className="symptom-tag"
@@ -592,7 +1017,10 @@ const PatientRegistration = () => {
         <div className="form-box analysis-box enhanced-box shadow-box">
           <div className="section-marker green"></div>
           <div className="section-content">
-            <h2 className="section-title large-title">복용약물</h2>
+            <h2 className="section-title large-title">
+              <img src={medicationIcon} alt="" className="section-icon" />
+              <span>복용약물</span>
+            </h2>
             <div className="form-row medication-row">
               <div className="form-group medication">
                 <label className="form-label">복용 중인 약물</label>
@@ -603,7 +1031,7 @@ const PatientRegistration = () => {
                   style={getInputStyle('medication')}
                 >
                   <option value="">약물을 선택하세요</option>
-                  {약물카테고리.map((약물, index) => (
+                  {safeCategories.약물카테고리.map((약물, index) => (
                     <option key={`medication-${index}-${약물}`} value={약물}>
                       {약물}
                     </option>
@@ -620,8 +1048,10 @@ const PatientRegistration = () => {
                   style={getInputStyle('preference')}
                 >
                   <option value="">기호식품을 선택하세요</option>
-                  {기호식품카테고리.map((기호품, index) => (
-                    <option key={`preference-${index}`} value={기호품}>{기호품}</option>
+                  {safeCategories.기호식품카테고리.map((기호품, index) => (
+                    <option key={`preference-${index}`} value={기호품}>
+                      {기호품}
+                    </option>
                   ))}
                 </select>
                 {error && <span className="error-message">{error}</span>}
@@ -674,7 +1104,10 @@ const PatientRegistration = () => {
         <div className="form-box analysis-box enhanced-box shadow-box">
           <div className="section-marker blue"></div>
           <div className="section-content">
-            <h2 className="section-title large-title">예약 정보</h2>
+            <h2 className="section-title large-title">
+              <img src={memoIcon} alt="" className="section-icon" />
+              <span>예약 정보</span>
+            </h2>
             <div className="input-row">
               <div className="input-group">
                 <label className="form-label required">예약 날짜</label>
@@ -683,24 +1116,31 @@ const PatientRegistration = () => {
                   name="appointmentDate"
                   value={formData.appointmentDate}
                   onChange={handleInputChange}
+                  min={today}
                   className="form-input"
-                  style={getInputStyle('appointmentDate')}
                   required
                 />
-                {error && <span className="error-message">{error}</span>}
               </div>
               <div className="input-group">
                 <label className="form-label required">예약 시간</label>
-                <input
-                  type="time"
+                <select
                   name="appointmentTime"
                   value={formData.appointmentTime}
                   onChange={handleInputChange}
                   className="form-input"
-                  style={getInputStyle('appointmentTime')}
                   required
-                />
-                {error && <span className="error-message">{error}</span>}
+                  disabled={isCheckingAvailability}
+                >
+                  <option value="">시간을 선택하세요</option>
+                  {AVAILABLE_TIME_SLOTS.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+                {isCheckingAvailability && (
+                  <div className="loading-message">예약 가능한 시간을 확인하고 있습니다...</div>
+                )}
               </div>
               <div className="input-group full-width">
                 <label className="form-label">메모</label>
@@ -728,19 +1168,10 @@ const PatientRegistration = () => {
         }}>
           <button 
             type="submit" 
+            disabled={isSubmitting}
             className="submit-button"
-            style={{
-              padding: '12px 40px',
-              fontSize: '1.1rem',
-              borderRadius: '5px',
-              border: 'none',
-              backgroundColor: '#4A90E2',
-              color: 'white',
-              cursor: 'pointer',
-              transition: 'background-color 0.3s'
-            }}
           >
-            예약하기
+            {isSubmitting ? '저장 중...' : '예약하기'}
           </button>
         </div>
       </form>

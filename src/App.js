@@ -10,6 +10,10 @@ import AdminLogin from './features/admin/components/AdminLogin';
 import ProtectedRoute from './features/admin/components/ProtectedRoute';
 import Home from './features/home/Home';
 import './App.css';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ko } from 'date-fns/locale';
+import AppointmentList from './features/clinic/components/AppointmentList';
 
 // 상수 정의
 export const LOCAL_STORAGE_KEY = 'ubioUserData';
@@ -144,25 +148,33 @@ export const updateAppointmentStatus = async (appointmentId, newStatus) => {
 
 function App() {
   return (
-    <>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/clinic" element={<PatientRegistration />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route 
-          path="/clinic/appointments" 
-          element={
-            <ProtectedRoute>
-              <AppointmentManagement />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="/clinic/appointment-confirmation" element={<AppointmentConfirmation />} />
-        <Route path="/input" element={<UserInfoForm />} />
-        <Route path="/data" element={<UserDataTable />} />
-      </Routes>
-    </>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+      <>
+        <Header />
+        <Routes>
+          {/* 기본 라우트 */}
+          <Route path="/" element={<Home />} />
+          
+          {/* 환자(클리닉) 라우트 */}
+          <Route path="/clinic">
+            <Route index element={<PatientRegistration />} />
+            <Route path="appointment-confirmation" element={<AppointmentConfirmation />} />
+          </Route>
+
+          {/* 관리자 라우트 */}
+          <Route path="/admin">
+            <Route path="login" element={<AdminLogin />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="appointments" element={<AppointmentManagement />} />
+            </Route>
+          </Route>
+
+          {/* 기타 라우트 */}
+          <Route path="/input" element={<UserInfoForm />} />
+          <Route path="/data" element={<UserDataTable />} />
+        </Routes>
+      </>
+    </LocalizationProvider>
   );
 }
 

@@ -1,0 +1,32 @@
+.main-page {
+  padding: 20px;
+}
+
+.content-wrapper {
+  display: flex;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.registration-section {
+  flex: 1;
+  min-width: 400px;
+}
+
+.list-section {
+  flex: 1;
+  min-width: 600px;
+}
+
+@media (max-width: 1200px) {
+  .content-wrapper {
+    flex-direction: column;
+  }
+  
+  .registration-section,
+  .list-section {
+    width: 100%;
+    min-width: auto;
+  }
+} 

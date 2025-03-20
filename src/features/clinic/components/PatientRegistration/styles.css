@@ -15,10 +15,14 @@
 }
 
 .section-title {
-  margin-bottom: 1.5rem;
-  color: #333;
-  font-size: 1.2rem;
-  font-weight: 600;
+  all: initial;  /* 기존 스타일 초기화 */
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  margin-left: 50px !important;
+  position: relative !important;
+  left: 20px !important;
+  font-family: inherit !important;
 }
 
 .form-row {
@@ -418,6 +422,22 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   background-color: #ff4444;
 }
 
+.section-marker.orange {
+  background-color: #FF9800;
+}
+
+.section-marker.yellow {
+  background-color: #FFFF00;
+}
+
+.section-marker.green {
+  background-color: #4CAF50;
+}
+
+.section-marker.blue {
+  background-color: #1a73e8;
+}
+
 .section-content {
   padding: 20px;
 }
@@ -510,9 +530,11 @@ input, select {
 }
 
 .registration-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  max-width: 1000px !important;
+  margin: 0 auto !important;
+  padding: 60px 50px !important;
+  min-height: 100vh;
+  background-color: #f8f9fa;
 }
 
 .symptoms-grid {
@@ -665,4 +687,243 @@ input, select {
 .error-message {
   background: var(--error-background);
   color: var(--error-text);
+}
+
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-top: 4px;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.form-group select option {
+  padding: 8px;
+}
+
+/* 시간 선택 드롭다운 스타일 */
+select#appointmentTime {
+  background-color: white;
+  cursor: pointer;
+}
+
+select#appointmentTime option:hover {
+  background-color: #f5f5f5;
+}
+
+select#appointmentTime:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.stress-assessment {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stress-select-container {
+  display: flex;
+  flex-direction: row;  /* 가로 배치 */
+  gap: 1rem;
+}
+
+.stress-select-field {
+  flex: 1;  /* 동일한 너비 */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stress-select-field select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.stress-select-field label {
+  font-weight: 500;
+}
+
+.selected-stress-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.stress-event-tag {
+  background-color: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.remove-event {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.stress-summary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+/* 섹션 컨테이너 */
+.registration-sections {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 40px !important;
+  align-items: center !important;
+  width: 100% !important;
+  padding: 0 30px !important;
+}
+
+/* 각 섹션 박스 */
+.registration-box {
+  width: 100% !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  background-color: #fff !important;
+  border-radius: 20px !important;
+  padding: 35px 80px !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05) !important;
+}
+
+/* 섹션 내부 컨텐츠 */
+.section-content {
+  padding: 15px 45px !important;
+  margin-top: 10px !important;
+}
+
+/* 섹션 타이틀 */
+.registration-box h2 {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  margin-left: 50px !important;
+  position: relative !important;
+  left: 20px !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+}
+
+/* 섹션 아이콘 */
+.registration-box h2 img {
+  width: 40px !important;
+  height: 40px !important;
+  margin-right: 18px !important;
+  object-fit: contain !important;
+}
+
+/* 버튼 컨테이너 */
+.button-container {
+  text-align: center !important;
+  margin-top: 50px !important;
+  margin-bottom: 30px !important;
+  width: 100% !important;
+}
+
+/* 반응형 디자인 */
+@media screen and (max-width: 768px) {
+  .registration-container {
+    padding: 40px 25px !important;
+  }
+
+  .registration-box {
+    padding: 25px 60px !important;
+  }
+
+  .section-content {
+    padding: 12px 35px !important;
+  }
+
+  .registration-box h2 {
+    margin-left: 35px !important;
+    left: 15px !important;
+    font-size: 20px !important;
+  }
+
+  .registration-box h2 img {
+    width: 32px !important;
+    height: 32px !important;
+    margin-right: 15px !important;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .registration-container {
+    padding: 30px 15px !important;
+  }
+
+  .registration-box {
+    padding: 20px 40px !important;
+  }
+
+  .section-content {
+    padding: 10px 25px !important;
+  }
+
+  .registration-box h2 {
+    margin-left: 25px !important;
+    left: 10px !important;
+    font-size: 18px !important;
+  }
+
+  .registration-box h2 img {
+    width: 28px !important;
+    height: 28px !important;
+    margin-right: 12px !important;
+  }
+
+  .submit-button {
+    width: 100% !important;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* 섹션별 아이콘 색상 */
+.section-marker.red + .section-content .section-icon {
+  filter: invert(23%) sepia(82%) saturate(2957%) hue-rotate(343deg) brightness(97%) contrast(96%);  /* 빨간색 */
+}
+
+.section-marker.orange + .section-content .section-icon {
+  filter: invert(63%) sepia(92%) saturate(1752%) hue-rotate(360deg) brightness(102%) contrast(106%);  /* 주황색 */
+}
+
+.section-marker.yellow + .section-content .section-icon {
+  filter: invert(83%) sepia(29%) saturate(6392%) hue-rotate(359deg) brightness(101%) contrast(104%);  /* 노란색 */
+}
+
+.section-marker.green + .section-content .section-icon {
+  filter: invert(68%) sepia(93%) saturate(389%) hue-rotate(84deg) brightness(92%) contrast(87%);  /* 초록색 */
+}
+
+.section-marker.blue + .section-content .section-icon {
+  filter: invert(48%) sepia(57%) saturate(2793%) hue-rotate(187deg) brightness(97%) contrast(98%);  /* 파란색 */
+}
+
+/* 아이콘 기본 스타일 */
+.section-icon {
+  width: 40px !important;
+  height: 40px !important;
+  margin-right: 18px !important;
+  object-fit: contain !important;
+  transition: filter 0.3s ease !important;
 } 
