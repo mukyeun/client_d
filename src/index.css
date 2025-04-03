@@ -41,3 +41,49 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* 테이블 스타일 */
+.ant-table-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.ant-table {
+  font-size: 14px;
+}
+
+/* 헤더 */
+.ant-table thead > tr > th {
+  background-color: #f8f9fa !important;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e9ecef;
+  padding: 12px 8px;
+}
+
+/* 셀 */
+.ant-table tbody > tr > td {
+  border-bottom: 1px solid #e9ecef;
+  padding: 12px 8px;
+}
+
+/* 호버 */
+.ant-table tbody > tr:hover td {
+  background-color: #f8f9fa;
+}
+
+/* 짝수 행 */
+.ant-table tbody > tr:nth-child(even) td {
+  background-color: #fafbfc;
+}
+
+@media (max-width: 768px) {
+  .ant-table {
+    font-size: 12px;
+  }
+  
+  .ant-table thead > tr > th,
+  .ant-table tbody > tr > td {
+    padding: 8px 4px;
+  }
+}

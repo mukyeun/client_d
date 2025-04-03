@@ -1,15 +1,14 @@
 .data-page-container {
-  padding: 2rem;
-  background: #f8fafc;
+  padding: 20px;
+  background: white;
+  min-height: calc(100vh - 60px);
 }
 
 .data-header {
   display: flex;
-  justify-content: flex-start;
-  gap: 8px;
+  justify-content: space-between;
   align-items: center;
-  margin: 20px 0;
-  padding: 8px;
+  margin-bottom: 20px;
 }
 
 .data-header h2 {
@@ -19,40 +18,47 @@
 
 .header-buttons {
   display: flex;
-  gap: 1rem;
+  gap: 10px;
 }
 
 .table-container {
+  overflow-x: auto;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow-x: auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .user-data-table {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background-color: white;
+  overflow-x: auto;
+}
+
+.user-data-table .ant-table-wrapper {
+  overflow-x: auto;
+}
+
+.user-data-table .ant-card {
+  margin: 20px;
 }
 
 .user-data-table th,
 .user-data-table td {
-  padding: 12px 8px;
+  padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
 }
 
 .user-data-table thead th {
-  background-color: #f8f9fa;
-  padding: 12px 8px;
-  border-bottom: 2px solid #dee2e6;
+  background-color: #f5f5f5;
   font-weight: bold;
-  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .user-data-table tbody tr:hover {
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
 }
 
 .no-data-message {
@@ -288,13 +294,11 @@ input[type="checkbox"].select-checkbox {
 
 /* 필터 컨트롤 스타일 */
 .filter-controls {
-  display: flex;
-  gap: 16px;
-  margin: 16px 0;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  flex-wrap: wrap;
+  background: linear-gradient(to right, #ffffff, #f8f9fa);
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
 }
 
 .date-filter {
@@ -330,8 +334,20 @@ input[type="checkbox"].select-checkbox {
 
 /* 반응형 스타일 */
 @media (max-width: 768px) {
+  .data-header {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  .button {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
   .filter-controls {
-    flex-direction: column;
+    padding: 16px;
   }
 
   .search-filter input {
@@ -509,8 +525,7 @@ input[type="checkbox"].select-checkbox {
 /* 테이블 기본 스타일 */
 .user-data-table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
+  overflow-x: auto;
 }
 
 /* 테이블 헤더 */
@@ -930,10 +945,15 @@ th:first-child {
 
 /* 체크박스 크기 조정 */
 .custom-checkbox {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.custom-checkbox:checked {
+  background-color: #4a6ee0;
+  border-color: #4a6ee0;
 }
 
 /* 체크박스 셀 */
@@ -1168,5 +1188,159 @@ th:first-child {
   .data-header button {
     flex: 1;
     min-width: calc(50% - 4px);
+  }
+}
+
+.table-card {
+  background: white;
+}
+
+.custom-table {
+  border-radius: 8px;
+}
+
+.custom-table .ant-table {
+  background: white;
+}
+
+/* 테이블 헤더 스타일 */
+.custom-table .ant-table-thead > tr > th {
+  background: #f0f2f5;
+  color: #1a3353;
+  font-weight: 600;
+  padding: 16px;
+  border: 1px solid #dee2e6;
+  border-bottom: 2px solid #bdc3c7;
+  text-align: center;
+}
+
+/* 테이블 셀 스타일 */
+.custom-table .ant-table-tbody > tr > td {
+  padding: 16px;
+  color: #4a5568;
+  border: 1px solid #dee2e6;
+  text-align: center;
+}
+
+/* 테이블 hover 효과 */
+.custom-table .ant-table-tbody > tr:hover > td {
+  background: #f8f9ff !important;
+}
+
+/* 선택된 행 스타일 */
+.custom-table .ant-table-tbody > tr.ant-table-row-selected > td {
+  background: #e6f7ff;
+}
+
+/* 체크박스 스타일 */
+.custom-table .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #1890ff;
+  border-color: #1890ff;
+}
+
+/* 페이지네이션 스타일 */
+.custom-table .ant-table-pagination {
+  margin: 16px 0;
+}
+
+/* 정렬 아이콘 스타일 */
+.custom-table .ant-table-column-sorter {
+  color: #a0aec0;
+}
+
+/* 필터 아이콘 스타일 */
+.custom-table .ant-table-filter-trigger {
+  color: #a0aec0;
+}
+
+/* 짝수/홀수 행 배경색 구분 */
+.custom-table .ant-table-tbody > tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* 테이블 헤더 그룹 스타일 */
+.custom-table .ant-table-thead > tr > th.ant-table-cell-fix-left,
+.custom-table .ant-table-thead > tr > th.ant-table-cell-fix-right {
+  background: #f0f2f5;
+}
+
+/* 고정 컬럼 스타일 */
+.custom-table .ant-table-cell-fix-left,
+.custom-table .ant-table-cell-fix-right {
+  background: white;
+}
+
+/* 버튼 스타일 */
+.ant-btn {
+  height: 34px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* 입력 필드 스타일 */
+.ant-input {
+  height: 34px;
+}
+
+/* 날짜 선택기 스타일 */
+.ant-picker {
+  height: 34px;
+}
+
+/* Space 컴포넌트 간격 */
+.ant-space {
+  gap: 8px !important;
+}
+
+/* 스크롤바 스타일링 */
+.ant-table-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ant-table-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 반응형 스타일 */
+@media screen and (max-width: 768px) {
+  .user-data-table .ant-card {
+    margin: 10px;
+  }
+  
+  .user-data-table .ant-space {
+    gap: 8px !important;
+  }
+  
+  .user-data-table .ant-input-search {
+    width: 150px !important;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .user-data-table .ant-card-head-title h2 {
+    font-size: 18px;
+  }
+  
+  .user-data-table .ant-btn {
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+  
+  .user-data-table .ant-input-search {
+    width: 120px !important;
   }
 }

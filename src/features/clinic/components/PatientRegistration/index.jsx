@@ -28,6 +28,12 @@ const AVAILABLE_TIME_SLOTS = [
   '16:00', '16:30', '17:00', '17:30'
 ];
 
+// 상수로 API URL 정의
+const SERVER_URL = 'http://localhost:5003';  // 직접 하드코딩
+
+// 상단에 BASE_URL 상수 추가
+const BASE_URL = 'http://localhost:5003';  // 서버 URL을 하드코딩
+
 const PatientRegistration = ({ onAppointmentCreated }) => {
   const navigate = useNavigate();
   
@@ -58,7 +64,15 @@ const PatientRegistration = ({ onAppointmentCreated }) => {
     medication: '',
     selectedMedications: [],
     preference: '',
-    selectedPreferences: []
+    selectedPreferences: [],
+    ab_ms: '',
+    ac_ms: '',
+    ad_ms: '',
+    ae_ms: '',
+    ba_ratio: '',
+    ca_ratio: '',
+    da_ratio: '',
+    ea_ratio: ''
   });
 
   const [error, setError] = useState('');
@@ -96,14 +110,14 @@ const PatientRegistration = ({ onAppointmentCreated }) => {
 
         // 요청 전 상세 로깅
         console.log('📢 API 요청 상세:', {
-          endpoint: 'http://localhost:5003/api/appointments/check',
+          endpoint: `${SERVER_URL}/api/appointments/check`,
           params: {
             appointmentDate: params.date,
             appointmentTime: params.time
           }
         });
 
-        const response = await axios.get('http://localhost:5003/api/appointments/check', { 
+        const response = await axios.get(`${SERVER_URL}/api/appointments/check`, { 
           params: {
             appointmentDate: params.date,
             appointmentTime: params.time
@@ -138,7 +152,7 @@ const PatientRegistration = ({ onAppointmentCreated }) => {
         console.log('📢 환자 정보 저장 요청:', patientData);
         
         const response = await axios.post(
-          'http://localhost:5003/api/patients', 
+          `${SERVER_URL}/api/patients`, 
           patientData,
           {
             headers: {
@@ -190,7 +204,7 @@ const PatientRegistration = ({ onAppointmentCreated }) => {
         console.log('📢 예약 생성 요청 데이터:', requestData);
 
         const response = await axios.post(
-          'http://localhost:5003/api/appointments',
+          `${SERVER_URL}/api/appointments`,
           requestData
         );
         
@@ -498,7 +512,7 @@ const PatientRegistration = ({ onAppointmentCreated }) => {
   const createAppointment = async (appointmentData) => {
     try {
       const response = await axios.post(
-        'http://localhost:5003/api/appointments',
+        `${SERVER_URL}/api/appointments`,
         appointmentData
       );
       
@@ -705,6 +719,64 @@ const PatientRegistration = ({ onAppointmentCreated }) => {
   const getInputStyle = (fieldName) => {
     // 필요한 스타일링 로직 추가
     return {};
+  };
+
+  // 유비오 데이터 가져오기 함수
+  const handleDataFetch = async () => {
+    try {
+      console.log('유비오 데이터 요청 시작');
+      
+      const response = await fetch('http://localhost:5003/api/ubio-data', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('받은 데이터:', result);
+
+      if (result.success && result.data) {
+        // 폼 데이터 업데이트
+        setFormData(prev => ({
+          ...prev,
+          ab_ms: result.data.ab_ms || '',
+          ac_ms: result.data.ac_ms || '',
+          ad_ms: result.data.ad_ms || '',
+          ae_ms: result.data.ae_ms || '',
+          ba_ratio: result.data.ba_ratio || '',
+          ca_ratio: result.data.ca_ratio || '',
+          da_ratio: result.data.da_ratio || '',
+          ea_ratio: result.data.ea_ratio || ''
+        }));
+
+        alert('유비오 맥파 데이터를 성공적으로 가져왔습니다.');
+      } else {
+        throw new Error('데이터 형식이 올바르지 않습니다.');
+      }
+    } catch (error) {
+      console.error('데이터 가져오기 실패:', error);
+      alert('유비오 데이터를 가져오는데 실패했습니다.');
+    }
+  };
+
+  // 파일 선택 핸들러 수정
+  const handleFileSelect = async (event) => {
+    try {
+      // 파일 선택 후 서버로 데이터 요청
+      await handleDataFetch();
+    } catch (error) {
+      console.error('파일 처리 오류:', error);
+      alert('데이터 처리 중 오류가 발생했습니다.');
+    } finally {
+      if (event?.target) {
+        event.target.value = '';
+      }
+    }
   };
 
   return (

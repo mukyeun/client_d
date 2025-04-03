@@ -3,12 +3,16 @@ const path = require('path');
 const fs = require('fs');
 const isDev = require('electron-is-dev');
 const { exec } = require('child_process');
+const xlsx = require('xlsx');
+const axios = require('axios');
+const XLSX = require('xlsx');
+const { MongoClient } = require('mongodb');
 
 let mainWindow;
 
 // 경로 설정
 const UBIO_INSTALL_PATH = 'C:\\Program Files (x86)\\uBioMacpa Pro';
-const UBIO_DATA_PATH = 'D:\\uBioMacpaData';
+const UBIO_DATA_PATH = 'D:\\uBioMacpaData\\유비오측정맥파.xlsx';
 const UBIO_EXE_PATH = path.join(UBIO_INSTALL_PATH, 'bin', 'uBioMacpaPro.exe');
 const DOWON_DATA_PATH = path.join(app.getPath('userData'), 'DowonData');
 
@@ -88,26 +92,15 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-      devTools: true
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
-  const startUrl = isDev 
-    ? 'http://127.0.0.1:3000' 
-    : `file://${path.join(__dirname, 'build/index.html')}`;
-  
-  console.log('Loading URL:', startUrl);
-  
-  // 로딩 재시도 함수
-  const loadURL = () => {
-    mainWindow.loadURL(startUrl).catch(err => {
-      console.log('Failed to load URL, retrying in 1 second...', err);
-      setTimeout(loadURL, 1000);
-    });
-  };
-
-  loadURL();
+  mainWindow.loadURL(
+    isDev
+      ? 'http://localhost:3000'
+      : `file://${path.join(__dirname, 'build/index.html')}`
+  );
 
   if (isDev) {
     mainWindow.webContents.openDevTools();
@@ -193,6 +186,112 @@ ipcMain.handle('create-backup', async () => {
     return { success: true, backupFile: backupFileName };
   } catch (error) {
     console.error('Backup failed:', error);
+    throw error;
+  }
+});
+
+// 파일 존재 여부 확인
+ipcMain.handle('check-file-exists', async (event, filePath) => {
+  try {
+    await fs.promises.access(filePath, fs.constants.F_OK);
+    return true;
+  } catch (error) {
+    console.error('파일 접근 오류:', error);
+    throw new Error(`파일을 찾을 수 없습니다: ${filePath}`);
+  }
+});
+
+// 엑셀 파일 읽기
+ipcMain.handle('read-excel-data', async (event, { filePath, userName, columns }) => {
+  try {
+    console.log('엑셀 파일 읽기 시작:', filePath);
+    console.log('검색할 사용자:', userName);
+
+    const workbook = XLSX.readFile(filePath);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    
+    // 데이터를 2차원 배열로 변환
+    const data = XLSX.utils.sheet_to_json(worksheet, { 
+      header: 1,
+      raw: false
+    });
+
+    console.log('전체 데이터 행 수:', data.length);
+
+    // 이름으로 행 찾기 (A열)
+    const userRows = data.filter(row => row && row[0] === userName);
+    
+    if (userRows.length === 0) {
+      throw new Error(`${userName}님의 데이터를 찾을 수 없습니다.`);
+    }
+
+    // 가장 최근 데이터 행 사용
+    const latestRow = userRows[userRows.length - 1];
+    
+    // 요청된 열의 데이터 추출
+    const result = {};
+    Object.entries(columns).forEach(([key, col]) => {
+      const colIndex = col.charCodeAt(0) - 'A'.charCodeAt(0);
+      result[key] = latestRow[colIndex]?.toString() || '';
+    });
+
+    console.log('추출된 데이터:', result);
+    return result;
+
+  } catch (error) {
+    console.error('엑셀 파일 읽기 오류:', error);
+    throw error;
+  }
+});
+
+// MongoDB 저장
+ipcMain.handle('save-to-mongodb', async (event, data) => {
+  try {
+    // MongoDB 연결 설정
+    const uri = 'mongodb://localhost:27017';
+    const client = new MongoClient(uri);
+
+    await client.connect();
+    console.log('MongoDB 연결 성공');
+
+    const db = client.db('ubioMacpa');
+    const collection = db.collection('patients');
+
+    // 데이터 저장
+    const result = await collection.insertOne({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await client.close();
+    console.log('MongoDB 저장 성공:', result);
+
+    return { success: true, data: result };
+
+  } catch (error) {
+    console.error('MongoDB 저장 오류:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// 데이터 조회
+ipcMain.handle('fetch-user-data', async () => {
+  try {
+    const uri = 'mongodb://localhost:27017';
+    const client = new MongoClient(uri);
+
+    await client.connect();
+    const db = client.db('ubioMacpa');
+    const collection = db.collection('patients');
+
+    const data = await collection.find({}).toArray();
+    await client.close();
+
+    return data;
+
+  } catch (error) {
+    console.error('데이터 조회 오류:', error);
     throw error;
   }
 });

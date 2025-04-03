@@ -1,19 +1,15 @@
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './shared/components/Header';
-import UserInfoForm from './components/UserInfoForm';
-import UserDataTable from './components/UserDataTable';
-import PatientRegistration from './features/clinic/components/PatientRegistration';
-import AppointmentManagement from './features/admin/components/AppointmentManagement';
-import AppointmentConfirmation from './features/clinic/components/AppointmentConfirmation';
-import AdminLogin from './features/admin/components/AdminLogin';
-import ProtectedRoute from './features/admin/components/ProtectedRoute';
+import { Box, Container } from '@mui/material';
+
+// 각 컴포넌트 import
 import Home from './features/home/Home';
-import './App.css';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ko } from 'date-fns/locale';
-import AppointmentList from './features/clinic/components/AppointmentList';
+import PatientRegistration from './features/clinic/components/PatientRegistration';
+import AppointmentConfirmation from './features/clinic/components/AppointmentConfirmation';
+import AppointmentManagement from './features/admin/components/AppointmentManagement';
+import UserInfoForm from './components/UserInfoForm/index';
+import UserDataTable from './components/UserDataTable';
 
 // 상수 정의
 export const LOCAL_STORAGE_KEY = 'ubioUserData';
@@ -22,26 +18,22 @@ export const APPOINTMENTS_STORAGE_KEY = 'ubioAppointments';
 // API 함수들
 export const saveUserInfo = async (userData) => {
   try {
-    const existingData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || '[]';
+    const existingData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
     existingData.push(userData);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(existingData));
-
     return {
       success: true,
       data: userData
     };
   } catch (error) {
-    console.error('저장 오류:', error);
-    return {
-      success: false,
-      error: '데이터 저장 중 오류가 발생했습니다'
-    };
+    console.error('Save error:', error);
+    throw error;
   }
 };
 
-export const getAllUserInfo = async () => {
+export const getAllPatients = async () => {
   try {
-    const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || '[]';
+    const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
     return {
       success: true,
       data: localData
@@ -146,36 +138,30 @@ export const updateAppointmentStatus = async (appointmentId, newStatus) => {
   }
 };
 
-function App() {
+// 임시 NotFound 컴포넌트
+const NotFound = () => (
+  <div style={{ textAlign: 'center', padding: '2rem' }}>
+    <h2>404 - 페이지를 찾을 수 없습니다</h2>
+    <p>요청하신 페이지가 존재하지 않습니다.</p>
+  </div>
+);
+
+const App = () => {
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-      <>
-        <Header />
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Header />
+      <Container component="main" sx={{ mt: 4, mb: 4, flex: 1 }}>
         <Routes>
-          {/* 기본 라우트 */}
           <Route path="/" element={<Home />} />
-          
-          {/* 환자(클리닉) 라우트 */}
-          <Route path="/clinic">
-            <Route index element={<PatientRegistration />} />
-            <Route path="appointment-confirmation" element={<AppointmentConfirmation />} />
-          </Route>
-
-          {/* 관리자 라우트 */}
-          <Route path="/admin">
-            <Route path="login" element={<AdminLogin />} />
-            <Route element={<ProtectedRoute />}>
-              <Route path="appointments" element={<AppointmentManagement />} />
-            </Route>
-          </Route>
-
-          {/* 기타 라우트 */}
+          <Route path="/registration" element={<PatientRegistration />} />
+          <Route path="/confirmation" element={<AppointmentConfirmation />} />
+          <Route path="/management" element={<AppointmentManagement />} />
           <Route path="/input" element={<UserInfoForm />} />
           <Route path="/data" element={<UserDataTable />} />
         </Routes>
-      </>
-    </LocalizationProvider>
+      </Container>
+    </Box>
   );
-}
+};
 
 export default App;

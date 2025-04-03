@@ -66,4 +66,4 @@ export const evaluateStressLevel = (totalScore) => {
       description: "질병 발생 가능성이 크게 증가"
     };
   }
-}; 
+};

@@ -1,271 +1,244 @@
-import React, { useState } from 'react';
-import './EditModal.css';
+import React from 'react';
+import { Modal, Form, Input, Select, InputNumber } from 'antd';
 
-const EditModal = ({ user, onClose, onSave }) => {
-  // 초기 상태를 빈 객체로 설정
-  const initialState = {
-    name: '',
-    residentNumber: '',
-    gender: '',
-    personality: '',
-    stress: '',
-    workIntensity: '',
-    height: '',
-    weight: '',
-    bmi: '',
-    pulse: '',
-    systolicBP: '',
-    diastolicBP: '',
-    ab_ms: '',
-    ac_ms: '',
-    ad_ms: '',
-    ae_ms: '',
-    ba_ratio: '',
-    ca_ratio: '',
-    da_ratio: '',
-    ea_ratio: '',
-    pvc: '',
-    bv: '',
-    sv: '',
-    hr: '',
-    symptoms: '',
-    medication: '',
-    preference: '',
-    memo: '',
-    ...user // 기존 사용자 데이터가 있으면 덮어쓰기
-  };
+const { Option } = Select;
+const { TextArea } = Input;
 
-  const [editedUser, setEditedUser] = useState(initialState);
+const EditModal = ({ visible, onCancel, onOk, record }) => {
+  const [form] = Form.useForm();
 
-  const handleChange = (field, value) => {
-    setEditedUser(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  // 미리 정의된 옵션들
+  const workIntensityOptions = ['매우 심함', '심함', '보통', '적음', '매우 적음'];
+  const symptomsOptions = ['두통', '어지러움', '피로감', '불면증', '스트레스', '목통증', '요통', '관절통', '소화불량', '호흡곤란', '불안감', '우울감'];
+  const medicationOptions = ['혈압약', '당뇨약', '진통제', '소화제', '수면제', '항생제', '영양제', '한약'];
+  const preferenceOptions = ['커피', '술', '담배', '탄산음료', '초콜릿', '패스트푸드', '인스턴트식품'];
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(editedUser);
+  React.useEffect(() => {
+    if (visible && record) {
+      // 문자열로 저장된 데이터를 배열로 변환
+      const defaultValues = {
+        ...record,
+        workIntensity: record.workIntensity || [],
+        symptoms: record.symptoms ? record.symptoms.split(',').filter(Boolean) : [],
+        medication: record.medication ? record.medication.split(',').filter(Boolean) : [],
+        preference: record.preference ? record.preference.split(',').filter(Boolean) : [],
+        memo: record.memo || ''
+      };
+      form.setFieldsValue(defaultValues);
+    }
+  }, [visible, record, form]);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      // 배열 데이터를 문자열로 변환
+      const processedValues = {
+        ...values,
+        symptoms: values.symptoms?.join(',') || '',
+        medication: values.medication?.join(',') || '',
+        preference: values.preference?.join(',') || ''
+      };
+      await onOk(processedValues);
+      form.resetFields();
+    } catch (error) {
+      console.error('폼 제출 오류:', error);
+    }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <h2>데이터 수정</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="form-section">
-            <h3>기본 정보</h3>
-            <div className="form-group">
-              <label>이름</label>
-              <input
-                type="text"
-                value={editedUser.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-              />
-            </div>
+    <Modal
+      title="데이터 수정"
+      open={visible}
+      onCancel={onCancel}
+      onOk={handleSubmit}
+      width={800}
+      destroyOnClose
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={record}
+      >
+        <Form.Item name="name" label="이름" rules={[{ required: true }]}>
+          <Input />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>주민등록번호</label>
-              <input
-                type="text"
-                value={editedUser.residentNumber}
-                onChange={(e) => handleChange('residentNumber', e.target.value)}
-              />
-            </div>
+        <Form.Item name="gender" label="성별" rules={[{ required: true }]}>
+          <Select>
+            <Option value="남">남</Option>
+            <Option value="여">여</Option>
+          </Select>
+        </Form.Item>
 
-            <div className="form-group">
-              <label>성별</label>
-              <select
-                value={editedUser.gender}
-                onChange={(e) => handleChange('gender', e.target.value)}
-              >
-                <option value="">선택하세요</option>
-                <option value="male">남성</option>
-                <option value="female">여성</option>
-              </select>
-            </div>
-          </div>
+        <Form.Item name="personality" label="성격">
+          <Select>
+            <Option value="매우 급함">매우 급함</Option>
+            <Option value="급함">급함</Option>
+            <Option value="보통">보통</Option>
+            <Option value="느긋">느긋</Option>
+            <Option value="매우 느긋">매우 느긋</Option>
+          </Select>
+        </Form.Item>
 
-          <div className="form-section">
-            <h3>신체 정보</h3>
-            <div className="form-group">
-              <label>신장(cm)</label>
-              <input
-                type="number"
-                value={editedUser.height}
-                onChange={(e) => handleChange('height', e.target.value)}
-              />
-            </div>
+        <Form.Item name="stress" label="스트레스">
+          <Input />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>체중(kg)</label>
-              <input
-                type="number"
-                value={editedUser.weight}
-                onChange={(e) => handleChange('weight', e.target.value)}
-              />
-            </div>
+        <Form.Item name="workIntensity" label="노동강도">
+          <Select
+            mode="tags"
+            style={{ width: '100%' }}
+            placeholder="노동강도를 선택하세요"
+            options={workIntensityOptions.map(item => ({ label: item, value: item }))}
+          />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>BMI</label>
-              <input
-                type="number"
-                value={editedUser.bmi}
-                onChange={(e) => handleChange('bmi', e.target.value)}
-              />
-            </div>
-          </div>
+        <Form.Item
+          name="residentNumber"
+          label="주민등록번호"
+        >
+          <Input />
+        </Form.Item>
 
-          <div className="form-section">
-            <h3>맥파 분석 데이터</h3>
-            <div className="form-group">
-              <label>맥박</label>
-              <input
-                type="number"
-                value={editedUser.pulse}
-                onChange={(e) => handleChange('pulse', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="height"
+          label="신장(cm)"
+          rules={[{ required: true, message: '키를 입력하세요' }]}
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>수축기 혈압</label>
-              <input
-                type="number"
-                value={editedUser.systolicBP}
-                onChange={(e) => handleChange('systolicBP', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="weight"
+          label="체중(kg)"
+          rules={[{ required: true, message: '체중을 입력하세요' }]}
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>이완기 혈압</label>
-              <input
-                type="number"
-                value={editedUser.diastolicBP}
-                onChange={(e) => handleChange('diastolicBP', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="bmi"
+          label="BMI"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            {/* 맥파 시간 간격 */}
-            <div className="form-group">
-              <label>a-b(ms)</label>
-              <input
-                type="number"
-                value={editedUser.ab_ms}
-                onChange={(e) => handleChange('ab_ms', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="pulse"
+          label="맥박"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>a-c(ms)</label>
-              <input
-                type="number"
-                value={editedUser.ac_ms}
-                onChange={(e) => handleChange('ac_ms', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="systolicBP"
+          label="수축기 혈압"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>a-d(ms)</label>
-              <input
-                type="number"
-                value={editedUser.ad_ms}
-                onChange={(e) => handleChange('ad_ms', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="diastolicBP"
+          label="이완기 혈압"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>a-e(ms)</label>
-              <input
-                type="number"
-                value={editedUser.ae_ms}
-                onChange={(e) => handleChange('ae_ms', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="ab_ms"
+          label="a-b(ms)"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            {/* 맥파 비율 */}
-            <div className="form-group">
-              <label>b/a</label>
-              <input
-                type="number"
-                value={editedUser.ba_ratio}
-                onChange={(e) => handleChange('ba_ratio', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="ac_ms"
+          label="a-c(ms)"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>c/a</label>
-              <input
-                type="number"
-                value={editedUser.ca_ratio}
-                onChange={(e) => handleChange('ca_ratio', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="ad_ms"
+          label="a-d(ms)"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>d/a</label>
-              <input
-                type="number"
-                value={editedUser.da_ratio}
-                onChange={(e) => handleChange('da_ratio', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="ae_ms"
+          label="a-e(ms)"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>e/a</label>
-              <input
-                type="number"
-                value={editedUser.ea_ratio}
-                onChange={(e) => handleChange('ea_ratio', e.target.value)}
-              />
-            </div>
-          </div>
+        <Form.Item
+          name="ba_ratio"
+          label="b/a"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-          <div className="form-section">
-            <h3>추가 정보</h3>
-            <div className="form-group">
-              <label>증상</label>
-              <input
-                type="text"
-                value={editedUser.symptoms}
-                onChange={(e) => handleChange('symptoms', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="ca_ratio"
+          label="c/a"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>복용약물</label>
-              <input
-                type="text"
-                value={editedUser.medication}
-                onChange={(e) => handleChange('medication', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="da_ratio"
+          label="d/a"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>기호식</label>
-              <input
-                type="text"
-                value={editedUser.preference}
-                onChange={(e) => handleChange('preference', e.target.value)}
-              />
-            </div>
+        <Form.Item
+          name="ea_ratio"
+          label="e/a"
+        >
+          <Input type="number" />
+        </Form.Item>
 
-            <div className="form-group">
-              <label>메모</label>
-              <textarea
-                value={editedUser.memo}
-                onChange={(e) => handleChange('memo', e.target.value)}
-              />
-            </div>
-          </div>
+        <Form.Item name="symptoms" label="증상">
+          <Select
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="증상을 선택하세요"
+            options={symptomsOptions.map(item => ({ label: item, value: item }))}
+            allowClear
+          />
+        </Form.Item>
 
-          <div className="modal-buttons">
-            <button type="submit" className="save-button">저장</button>
-            <button type="button" onClick={onClose} className="cancel-button">취소</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Form.Item name="medication" label="복용약물">
+          <Select
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="복용 중인 약물을 선택하세요"
+            options={medicationOptions.map(item => ({ label: item, value: item }))}
+            allowClear
+          />
+        </Form.Item>
+
+        <Form.Item name="preference" label="기호식품">
+          <Select
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="기호식품을 선택하세요"
+            options={preferenceOptions.map(item => ({ label: item, value: item }))}
+            allowClear
+          />
+        </Form.Item>
+
+        <Form.Item name="memo" label="메모">
+          <TextArea 
+            rows={3} 
+            placeholder="메모를 입력하세요"
+            allowClear
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 
