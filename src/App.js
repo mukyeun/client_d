@@ -1,15 +1,15 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Header from './shared/components/Header';
 import { Box, Container } from '@mui/material';
+import Header from './shared/components/Header';
 
-// 각 컴포넌트 import
+// 페이지 컴포넌트 import
 import Home from './features/home/Home';
 import PatientRegistration from './features/clinic/components/PatientRegistration';
 import AppointmentConfirmation from './features/clinic/components/AppointmentConfirmation';
 import AppointmentManagement from './features/admin/components/AppointmentManagement';
-import UserInfoForm from './components/UserInfoForm/index';
-import UserDataTable from './components/UserDataTable';
+import UserInfoForm from './components/form/UserInfoForm';
+import UserDataTable from './components/table/UserDataTable';
 
 // 상수 정의
 export const LOCAL_STORAGE_KEY = 'ubioUserData';
@@ -138,26 +138,58 @@ export const updateAppointmentStatus = async (appointmentId, newStatus) => {
   }
 };
 
-// 임시 NotFound 컴포넌트
+// 404 페이지 컴포넌트
 const NotFound = () => (
-  <div style={{ textAlign: 'center', padding: '2rem' }}>
+  <Box sx={{ 
+    textAlign: 'center', 
+    py: 8,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 2 
+  }}>
     <h2>404 - 페이지를 찾을 수 없습니다</h2>
     <p>요청하신 페이지가 존재하지 않습니다.</p>
-  </div>
+  </Box>
 );
 
 const App = () => {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      minHeight: '100vh',
+      bgcolor: '#f5f5f5' 
+    }}>
       <Header />
-      <Container component="main" sx={{ mt: 4, mb: 4, flex: 1 }}>
+      <Container 
+        component="main" 
+        maxWidth="lg"
+        sx={{ 
+          mt: 4, 
+          mb: 4, 
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
         <Routes>
+          {/* 홈 페이지 */}
           <Route path="/" element={<Home />} />
+          
+          {/* 진료 관련 라우트 */}
           <Route path="/registration" element={<PatientRegistration />} />
           <Route path="/confirmation" element={<AppointmentConfirmation />} />
+          
+          {/* 관리자 라우트 */}
           <Route path="/management" element={<AppointmentManagement />} />
+          
+          {/* 환자 정보 관련 라우트 */}
           <Route path="/input" element={<UserInfoForm />} />
           <Route path="/data" element={<UserDataTable />} />
+          
+          {/* 404 페이지 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Container>
     </Box>
